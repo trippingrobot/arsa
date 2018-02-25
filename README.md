@@ -72,7 +72,7 @@ from arsa-sdk import Router
 @Router.route("users.list")
 def list_users():
     """ Get users """
-    return []
+    return [{'id':'124', 'name':'Bob Star', 'email':'bob@star.io'}]
 ```
 
 Deploy your API to arsa.io
