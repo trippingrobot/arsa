@@ -67,12 +67,20 @@ arsa config
 Create a `handler.py` file to handle your API routes
 
 ```python
-from arsa-sdk import Router
+import arsa-sdk
 
-@Router.route("users.list")
+@Arsa.route("users.list")
 def list_users():
     """ Get users """
     return [{'id':'124', 'name':'Bob Star', 'email':'bob@star.io'}]
+```
+
+Test your API
+
+```
+arsa run
+
+curl http://localhost:3000/users
 ```
 
 Deploy your API to arsa.io
