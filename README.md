@@ -1,8 +1,8 @@
 # Arsa Python SDK
 
-Welcome to the Arsa Python SDK. This sdk will help to deploy your api to Arsa by providing
-a wrapper around your Swagger file and simple conventions to point your endpoints
-to your application logic.
+Welcome to the Arsa Python SDK. This sdk will help to create and deploy your api to Arsa. Simply
+wrap your route endpoints with Arsa generators and code your application logic. In one command
+deploy your api to arsa.io and you're done.
 
 ## Quick Start Guide
 
@@ -10,52 +10,6 @@ Install the sdk using pip like so...
 
 ```
 pip install arsa-sdk
-```
-
-Create a Swagger 2.0 definition file called `swagger.yaml` describing your api endpoints...
-
-```yaml
-swagger: "2.0"
-info:
-  description: Sample Arsa API
-  version: "0.0.1"
-  title: "Sample Arsa"
-  contact:
-    email: "sample@api.io"
-  license:
-    name: "Apache 2.0"
-    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-host: "sample.api.io"
-basePath: "/v1"
-paths:
-  /users:
-    get:
-      summary: "List the available users"
-      description: ""
-      operationId: "users.list"
-      produces:
-      - "application/json"
-      responses:
-        200:
-          description: "successful operation"
-          schema:
-            type: "array"
-            items:
-              $ref: "#/definitions/User"
-        405:
-          description: "Invalid input"
-definitions:
-  User:
-    type: "object"
-    properties:
-      id:
-        type: "integer"
-        format: "int64"
-        readOnly: true
-      name:
-        type: "string"
-      email:
-        type: "string"
 ```
 
 Configure your project for Arsa.
@@ -69,10 +23,28 @@ Create a `handler.py` file to handle your API routes
 ```python
 import arsa-sdk
 
-@Arsa.route("users.list")
+@Arsa.get("/users")
 def list_users():
     """ Get users """
     return [{'id':'124', 'name':'Bob Star', 'email':'bob@star.io'}]
+
+@Arsa.post("/users")
+@Arsa.authenticate
+def create_user(name, **kwargs):
+    """ Create user if client is authenticated """
+    return {'id':'124', 'name':name, 'email':kwargs['email']}
+
+@Arsa.get("/accounts/{account_id}")
+def get_account(account_id):
+    """ Get account with params """
+    return [{'id':account_id, 'name':'Acme Inc.', 'email':'support@acme.io'}]
+
+@Arsa.post("/users")
+@Arsa.authenticate
+@Arsa.validate(name='string')
+def create_account(name, **kwargs):
+    """ Create account and make sure 'name' parameter is passed as a string """
+    return {'id':'124', 'name':name}
 ```
 
 Test your API
