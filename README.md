@@ -21,7 +21,7 @@ arsa config
 Create a `handler.py` file to handle your API routes
 
 ```python
-import arsa-sdk
+from arsa-sdk import Arsa
 
 @Arsa.get("/users")
 def list_users():
@@ -29,8 +29,9 @@ def list_users():
     return [{'id':'124', 'name':'Bob Star', 'email':'bob@star.io'}]
 
 @Arsa.post("/users")
-@Arsa.authenticate
-def create_user(name, **kwargs):
+@Arsa.required(name='string')
+@Arsa.optional(email='string')
+def create_user(name, **optional_kwargs):
     """ Create user if client is authenticated """
     return {'id':'124', 'name':name, 'email':kwargs['email']}
 
@@ -41,8 +42,8 @@ def get_account(account_id):
 
 @Arsa.post("/users")
 @Arsa.authenticate
-@Arsa.validate(name='string')
-def create_account(name, **kwargs):
+@Arsa.required(name='string')
+def create_account(name):
     """ Create account and make sure 'name' parameter is passed as a string """
     return {'id':'124', 'name':name}
 ```
