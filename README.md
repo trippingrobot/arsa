@@ -35,7 +35,7 @@ def create_user(name, **optional_kwargs):
     """ Create user if client is authenticated """
     return {'id':'124', 'name':name, 'email':kwargs['email']}
 
-@Arsa.get("/accounts/{account_id}")
+@Arsa.get("/accounts/<account_id>")
 def get_account(account_id):
     """ Get account with params """
     return [{'id':account_id, 'name':'Acme Inc.', 'email':'support@acme.io'}]
