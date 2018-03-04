@@ -33,7 +33,7 @@ def list_users():
 @Arsa.optional(email='string')
 def create_user(name, **optional_kwargs):
     """ Create user if client is authenticated """
-    return {'id':'124', 'name':name, 'email':kwargs['email']}
+    return {'id':'124', 'name':name, 'email':optional_kwargs['email']}
 
 @Arsa.get("/accounts/<account_id>")
 def get_account(account_id):
