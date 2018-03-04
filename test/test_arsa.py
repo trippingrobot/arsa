@@ -61,3 +61,15 @@ def test_optional_invalid_route_value():
     Arsa.route('/val')(Arsa.optional(name=str)(func))
     with pytest.raises(ValueError):
         Arsa.serve('/val', 'GET', **{'name':123})
+
+def test_get_route_with_auth():
+    func = MagicMock(return_value='response')
+    Arsa.route('/foobar')(Arsa.token_required()(func))
+    response = Arsa.serve('/foobar', 'GET', token="1234")
+    assert response == 'response'
+
+def test_get_route_without_auth():
+    func = MagicMock(return_value='response')
+    Arsa.route('/foobar')(Arsa.token_required()(func))
+    with pytest.raises(ValueError):
+        Arsa.serve('/foobar', 'GET')

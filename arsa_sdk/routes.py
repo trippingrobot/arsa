@@ -5,6 +5,15 @@ class Route(Rule):
     def __init__(self, endpoint, **kwargs):
         super(Route, self).__init__('/_arsa', endpoint=endpoint, **kwargs)
         self._conditions = {}
+        self._token_required = False
+
+    @property
+    def token_required(self):
+        return self._token_required
+
+    @token_required.setter
+    def token_required(self, value):
+        self._token_required = value
 
     def set_rule(self, rule, methods=None):
         self.rule = rule

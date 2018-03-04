@@ -36,8 +36,14 @@ class Arsa(object):
 
 
     @classmethod
-    def token_required(self):
-        raise NotImplementedError()
+    def token_required(cls):
+        def decorator(func):
+            instance = cls()
+            route = instance.factory.register_endpoint(func)
+            route.token_required = True
+            return func
+
+        return decorator
 
     @classmethod
     def required(cls, **expected_kwargs):
@@ -65,7 +71,7 @@ class Arsa(object):
         instance.factory.empty()
 
     @classmethod
-    def serve(cls, url, method, **kwargs):
+    def serve(cls, url, method, token=None, **kwargs):
         """ Serve the route by passing the specified keyword
             arguments.
         """
@@ -76,6 +82,9 @@ class Arsa(object):
 
         kwargs.update(arguments)
         rule.has_valid_arguments(kwargs)
+
+        if rule.token_required and token is None:
+            raise ValueError("Not token sent.")
 
         LOGGER.log(logging.INFO, "Serving route %s", url)
         return rule.endpoint(**kwargs)

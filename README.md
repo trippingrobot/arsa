@@ -41,7 +41,7 @@ def get_account(account_id):
     return [{'id':account_id, 'name':'Acme Inc.', 'email':'support@acme.io'}]
 
 @Arsa.post("/users")
-@Arsa.authenticate
+@Arsa.token_required
 @Arsa.required(name='string')
 def create_account(name):
     """ Create account and make sure 'name' parameter is passed as a string """
