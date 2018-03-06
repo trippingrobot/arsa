@@ -18,7 +18,7 @@ class Route(Rule):
     def set_rule(self, rule, methods=None):
         self.rule = rule
 
-        # Taken from super class
+        # Taken from super class init method
         if methods is None:
             self.methods = None
         else:

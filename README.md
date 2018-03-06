@@ -9,7 +9,7 @@ deploy your api to arsa.io and you're done.
 Install the sdk using pip like so...
 
 ```
-pip install arsa-sdk
+pip install arsa_sdk
 ```
 
 Configure your project for Arsa.
@@ -21,7 +21,7 @@ arsa config
 Create a `handler.py` file to handle your API routes
 
 ```python
-from arsa-sdk import Arsa
+from arsa_sdk import Arsa
 
 @Arsa.get("/users")
 def list_users():

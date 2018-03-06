@@ -1,6 +1,8 @@
 """ Main module """
 import logging
+import json
 from werkzeug.routing import Map
+from werkzeug.wrappers import Request, Response
 
 from .routes import RouteFactory
 
@@ -76,7 +78,6 @@ class Arsa(object):
             arguments.
         """
         instance = cls()
-        print(instance.factory.routes)
         routes = Map(rules=[instance.factory]).bind('arsa.io')
         (rule, arguments) = routes.match(url, method=method, return_rule=True)
 
@@ -88,3 +89,32 @@ class Arsa(object):
 
         LOGGER.log(logging.INFO, "Serving route %s", url)
         return rule.endpoint(**kwargs)
+
+    @classmethod
+    def create_app(cls):
+
+        instance = cls()
+        routes = Map(rules=[instance.factory]).bind('arsa.io')
+
+        def app(environ, start_response):
+            req = Request(environ)
+
+            # Find url rule
+            (rule, arguments) = routes.match(req.path, method=req.method, return_rule=True)
+
+            if rule.token_required and 'x-api-token' not in req.headers:
+                raise ValueError("Not token sent.")
+
+            if req.data:
+                data = json.loads(req.data)
+                arguments.update(data)
+
+            rule.has_valid_arguments(arguments)
+
+            LOGGER.log(logging.INFO, "Serving route %s", rule.rule)
+            body = rule.endpoint(**arguments)
+
+            response = Response(json.dumps(body), mimetype='application/json')
+            return response(environ, start_response)
+
+        return app
