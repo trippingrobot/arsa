@@ -73,24 +73,6 @@ class Arsa(object):
         instance.factory.empty()
 
     @classmethod
-    def serve(cls, url, method, token=None, **kwargs):
-        """ Serve the route by passing the specified keyword
-            arguments.
-        """
-        instance = cls()
-        routes = Map(rules=[instance.factory]).bind('arsa.io')
-        (rule, arguments) = routes.match(url, method=method, return_rule=True)
-
-        kwargs.update(arguments)
-        rule.has_valid_arguments(kwargs)
-
-        if rule.token_required and token is None:
-            raise ValueError("Not token sent.")
-
-        LOGGER.log(logging.INFO, "Serving route %s", url)
-        return rule.endpoint(**kwargs)
-
-    @classmethod
     def create_app(cls):
 
         instance = cls()
@@ -108,6 +90,8 @@ class Arsa(object):
             if req.data:
                 data = json.loads(req.data)
                 arguments.update(data)
+
+            print(arguments)
 
             rule.has_valid_arguments(arguments)
 
