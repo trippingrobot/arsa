@@ -9,7 +9,7 @@ deploy your api to arsa.io and you're done.
 Install the sdk using pip like so...
 
 ```
-pip install arsa_sdk
+pip install arsa
 ```
 
 Configure your project for Arsa.
