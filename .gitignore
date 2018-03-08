@@ -4,3 +4,7 @@ venv/
 .pytest_cache/
 __pycache__
 .tox/
+
+arsa.egg-info/*
+build/
+dist/

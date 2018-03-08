@@ -1,27 +1,4 @@
-# Arsa Python SDK
-
-Welcome to the Arsa Python SDK. This sdk will help to create and deploy your api to Arsa. Simply
-wrap your route endpoints with Arsa generators and code your application logic. In one command
-deploy your api to arsa.io and you're done.
-
-## Quick Start Guide
-
-Install the sdk using pip like so...
-
-```
-pip install arsa_sdk
-```
-
-Configure your project for Arsa.
-
-```
-arsa config
-```
-
-Create a `handler.py` file to handle your API routes
-
-```python
-from arsa_sdk import Arsa
+from arsa import Arsa
 
 @Arsa.route("/users")
 def list_users():
@@ -47,18 +24,3 @@ def get_account(account_id):
 def create_account(name):
     """ Create account and make sure 'name' parameter is passed as a string """
     return {'id':'124', 'name':name}
-```
-
-Test your API
-
-```
-arsa run
-
-curl http://localhost:3000/users
-```
-
-Deploy your API to arsa.io
-
-```
-arsa deploy
-```

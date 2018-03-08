@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Arsa command line script"""
 import os
 import sys
@@ -55,7 +57,6 @@ def run_command(host, port, path, reload):
     from werkzeug.serving import run_simple
 
     import_path = setup_path(path)
-    print(import_path)
     __import__(import_path)
 
     app = Arsa.create_app()

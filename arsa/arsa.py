@@ -1,12 +1,10 @@
 """ Main module """
-import logging
 import json
 from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
+from werkzeug.exceptions import HTTPException, Unauthorized
 
 from .routes import RouteFactory
-
-LOGGER = logging.getLogger(__name__)
 
 class Arsa(object):
     """
@@ -73,32 +71,32 @@ class Arsa(object):
         instance.factory.empty()
 
     @classmethod
-    def create_app(cls):
+    def create_app(cls, check_token=True):
 
         instance = cls()
         routes = Map(rules=[instance.factory]).bind('arsa.io')
 
         def app(environ, start_response):
-            req = Request(environ)
+            try:
+                req = Request(environ)
 
-            # Find url rule
-            (rule, arguments) = routes.match(req.path, method=req.method, return_rule=True)
+                # Find url rule
+                (rule, arguments) = routes.match(req.path, method=req.method, return_rule=True)
 
-            if rule.token_required and 'x-api-token' not in req.headers:
-                raise ValueError("Not token sent.")
+                if check_token and rule.token_required and 'x-api-token' not in req.headers:
+                    raise Unauthorized("Not token sent.")
 
-            if req.data:
-                data = json.loads(req.data)
-                arguments.update(data)
+                if req.data:
+                    data = json.loads(req.data)
+                    arguments.update(data)
 
-            print(arguments)
+                rule.has_valid_arguments(arguments)
+                body = rule.endpoint(**arguments)
 
-            rule.has_valid_arguments(arguments)
-
-            LOGGER.log(logging.INFO, "Serving route %s", rule.rule)
-            body = rule.endpoint(**arguments)
-
-            response = Response(json.dumps(body), mimetype='application/json')
-            return response(environ, start_response)
+                response = Response(json.dumps(body), mimetype='application/json')
+                return response(environ, start_response)
+            except HTTPException as error:
+                resp = error.get_response(environ)
+                return resp(environ, start_response)
 
         return app

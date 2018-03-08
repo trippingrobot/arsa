@@ -1,10 +1,9 @@
 import pytest
 import json
 from unittest.mock import MagicMock
-from werkzeug.exceptions import NotFound
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
-from arsa_sdk import Arsa
+from arsa import Arsa
 
 
 @pytest.fixture(autouse=True)
@@ -14,9 +13,9 @@ def empty():
     Arsa.empty()
 
 def test_invalid_route():
-    client = Client(Arsa.create_app())
-    with pytest.raises(NotFound):
-        client.open('/bad/path')
+    client = Client(Arsa.create_app(), response_wrapper=Response)
+    response = client.get('/bad/path')
+    assert response.status_code == 404
 
 def test_get_route():
     func = MagicMock(return_value='response')
@@ -50,8 +49,8 @@ def test_get_route_with_invalid_slug():
     Arsa.route('/foobar/<int:slug>')(func)
 
     client = Client(Arsa.create_app(), response_wrapper=Response)
-    with pytest.raises(NotFound):
-        client.get('/foobar/bar')
+    response = client.get('/foobar/bar')
+    assert response.status_code == 404
 
 def test_validate_route():
     func = MagicMock(side_effect=lambda **kwargs: kwargs['name'])
@@ -67,8 +66,8 @@ def test_invalid_route_value():
     Arsa.route('/val')(Arsa.required(name=str)(func))
 
     client = Client(Arsa.create_app(), response_wrapper=Response)
-    with pytest.raises(ValueError):
-        client.get('/val', data={'name':'Bob'})
+    response = client.get('/val', data={'name':'Bob'})
+    assert response.status_code == 400
 
 def test_optional_route_value():
     func = MagicMock(return_value='response')
@@ -84,8 +83,8 @@ def test_optional_invalid_route_value():
     Arsa.route('/val')(Arsa.optional(name=str)(func))
 
     client = Client(Arsa.create_app(), response_wrapper=Response)
-    with pytest.raises(ValueError):
-        client.get('/val', data=json.dumps({'name':123}))
+    response = client.get('/val', data=json.dumps({'name':123}))
+    assert response.status_code == 400
 
 def test_get_route_with_auth():
     func = MagicMock(return_value='response')
@@ -101,5 +100,14 @@ def test_get_route_without_auth():
     Arsa.route('/foobar')(Arsa.token_required()(func))
 
     client = Client(Arsa.create_app(), response_wrapper=Response)
-    with pytest.raises(ValueError):
-        client.get('/foobar')
+    response = client.get('/foobar')
+    assert response.status_code == 401
+
+def test_token_bypass():
+    func = MagicMock(return_value='response')
+    Arsa.route('/foobar')(Arsa.token_required()(func))
+
+    client = Client(Arsa.create_app(check_token=False), response_wrapper=Response)
+    response = client.get('/foobar')
+    assert response.status_code == 200
+    assert response.data == b'"response"'

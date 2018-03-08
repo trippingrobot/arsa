@@ -1,4 +1,5 @@
 from werkzeug.routing import (Rule, RuleFactory)
+from werkzeug.exceptions import BadRequest
 
 class Route(Rule):
 
@@ -39,12 +40,12 @@ class Route(Rule):
                 optional_key = key.lstrip('!')
                 if optional_key in arguments:
                     if not isinstance(arguments[optional_key], condition):
-                        raise ValueError("argument {} is not of type {}".format(key, condition))
+                        raise BadRequest("argument {} is not of type {}".format(key, condition))
             else:
                 if key not in arguments:
-                    raise ValueError("argument {} must be supplied".format(key))
+                    raise BadRequest(description="argument {} must be supplied".format(key))
                 elif not isinstance(arguments[key], condition):
-                    raise ValueError("argument {} is not of type {}".format(key, condition))
+                    raise BadRequest("argument {} is not of type {}".format(key, condition))
 
         return True
 
