@@ -2,7 +2,7 @@
 import json
 from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
-from werkzeug.exceptions import HTTPException, Unauthorized
+from werkzeug.exceptions import HTTPException, Unauthorized, BadRequest
 
 from .routes import RouteFactory
 
@@ -86,9 +86,13 @@ class Arsa(object):
                 if check_token and rule.token_required and 'x-api-token' not in req.headers:
                     raise Unauthorized("Not token sent.")
 
+
                 if req.data:
-                    data = json.loads(req.data)
-                    arguments.update(data)
+                    try:
+                        data = json.loads(req.data)
+                        arguments.update(data)
+                    except ValueError:
+                        raise BadRequest("JSON body was malformed")
 
                 rule.has_valid_arguments(arguments)
                 body = rule.endpoint(**arguments)

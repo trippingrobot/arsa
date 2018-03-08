@@ -36,7 +36,7 @@ class Route(Rule):
 
     def has_valid_arguments(self, arguments):
         try:
-            valid_arguments(arguments, self._conditions)
+            valid_arguments(self.endpoint.__name__, arguments, self._conditions)
         except ArgumentKeyError as key_error:
             raise BadRequest(str(key_error))
 

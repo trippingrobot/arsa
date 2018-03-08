@@ -20,22 +20,23 @@ class Model(object):
 
         return properties
 
-def valid_arguments(arguments, attributes):
+def valid_arguments(name, arguments, attributes):
 
     def valid_argument(name, argument, condition):
         if issubclass(condition, Model):
-            valid_arguments(argument, condition._get_properties())
+            valid_arguments(name, argument, condition._get_properties())
         elif not isinstance(argument, condition):
             raise ArgumentKeyError("argument {} was not of the type {}".format(name, condition))
         return True
 
     for key, attr in attributes.items():
+        next_name = "{}.{}".format(name, key)
         if attr.optional:
             if key in arguments:
-                valid_argument(key, arguments[key], attr.attr_type)
+                valid_argument(next_name, arguments[key], attr.attr_type)
         elif not attr.optional and key not in arguments:
-            raise ArgumentKeyError("argument {} was not detected.".format(key))
+            raise ArgumentKeyError("argument {} was not detected.".format(next_name))
         else:
-            valid_argument(key, arguments[key], attr.attr_type)
+            valid_argument(next_name, arguments[key], attr.attr_type)
 
     return True
