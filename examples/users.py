@@ -1,4 +1,9 @@
 from arsa import Arsa
+from arsa.model import Model, Attribute
+
+class Person(Model):
+    name = Attribute(str)
+    phone = Attribute(int, optional=True)
 
 @Arsa.route("/users")
 def list_users():
@@ -20,7 +25,9 @@ def get_account(account_id):
 
 @Arsa.route("/accounts", methods=['POST'])
 @Arsa.token_required()
-@Arsa.required(name=str)
-def create_account(name):
+@Arsa.required(name=str, owner=Person)
+@Arsa.optional(partner=Person)
+def create_account(name, owner, **optional_kwargs):
     """ Create account and make sure 'name' parameter is passed as a string """
-    return {'id':'124', 'name':name}
+    partner = optional_kwargs['partner'] if 'partner' in optional_kwargs else None
+    return {'id':'124', 'name':name, 'owner': owner, 'partner': partner}

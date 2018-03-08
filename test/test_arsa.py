@@ -4,6 +4,11 @@ from unittest.mock import MagicMock
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
 from arsa import Arsa
+from arsa.model import Model
+
+
+class TestModel(Model):
+    name = str
 
 
 @pytest.fixture(autouse=True)
@@ -111,3 +116,12 @@ def test_token_bypass():
     response = client.get('/foobar')
     assert response.status_code == 200
     assert response.data == b'"response"'
+
+# def test_validate_route_with_model():
+#     func = MagicMock(side_effect=lambda model: model.name)
+#     Arsa.route('/val')(Arsa.required(tester=TestModel)(func))
+#
+#     client = Client(Arsa.create_app(), response_wrapper=Response)
+#     response = client.get('/val', data=json.dumps({'name':'Bob'}))
+#     assert response.status_code == 200
+#     assert response.data == b'"Bob"'

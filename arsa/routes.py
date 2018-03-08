@@ -1,6 +1,9 @@
 from werkzeug.routing import (Rule, RuleFactory)
 from werkzeug.exceptions import BadRequest
 
+from .model import valid_arguments, Attribute
+from .exceptions import ArgumentKeyError
+
 class Route(Rule):
 
     def __init__(self, endpoint, **kwargs):
@@ -28,24 +31,14 @@ class Route(Rule):
             self.methods = set([x.upper() for x in methods])
 
     def add_validation(self, optional=False, **conditions):
-        if optional:
-            conditions = {"!{}".format(k): v for k, v in conditions.items()}
+        conditions = {k: Attribute(v, optional=optional) for k, v in conditions.items()}
         self._conditions.update(conditions)
 
     def has_valid_arguments(self, arguments):
-        if self._conditions is False:
-            return True
-        for key, condition in self._conditions.items():
-            if key.startswith("!"):
-                optional_key = key.lstrip('!')
-                if optional_key in arguments:
-                    if not isinstance(arguments[optional_key], condition):
-                        raise BadRequest("argument {} is not of type {}".format(key, condition))
-            else:
-                if key not in arguments:
-                    raise BadRequest(description="argument {} must be supplied".format(key))
-                elif not isinstance(arguments[key], condition):
-                    raise BadRequest("argument {} is not of type {}".format(key, condition))
+        try:
+            valid_arguments(arguments, self._conditions)
+        except ArgumentKeyError as key_error:
+            raise BadRequest(str(key_error))
 
         return True
 
