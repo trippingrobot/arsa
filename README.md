@@ -52,8 +52,7 @@ def get_account(account_id):
 @Arsa.optional(partner=Person)
 def create_account(name, owner, **optional_kwargs):
     """ Create account and make sure 'name' parameter is passed as a string """
-    partner = optional_kwargs['partner'] if 'partner' in optional_kwargs else None
-    return {'id':'124', 'name':name, 'owner': owner, 'partner': partner}
+    return {'id':'124', 'name':name, 'owner': owner, 'partner': optional_kwargs.get('partner', None)}
 ```
 
 Test your API

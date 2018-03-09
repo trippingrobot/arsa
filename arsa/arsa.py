@@ -5,6 +5,7 @@ from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import HTTPException, Unauthorized, BadRequest
 
 from .routes import RouteFactory
+from .util import to_serializable
 
 class Arsa(object):
     """
@@ -95,9 +96,11 @@ class Arsa(object):
                         raise BadRequest("JSON body was malformed")
 
                 rule.has_valid_arguments(arguments)
-                body = rule.endpoint(**arguments)
+                decoded_args = rule.decode_arguments(arguments)
 
-                response = Response(json.dumps(body), mimetype='application/json')
+                body = rule.endpoint(**decoded_args)
+
+                response = Response(json.dumps(body, default=to_serializable), mimetype='application/json')
                 return response(environ, start_response)
             except HTTPException as error:
                 resp = error.get_response(environ)

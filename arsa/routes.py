@@ -1,7 +1,9 @@
+from collections import namedtuple
 from werkzeug.routing import (Rule, RuleFactory)
 from werkzeug.exceptions import BadRequest
 
-from .model import valid_arguments, Attribute
+
+from .model import valid_arguments, Attribute, Model
 from .exceptions import ArgumentKeyError
 
 class Route(Rule):
@@ -42,6 +44,13 @@ class Route(Rule):
 
         return True
 
+    def decode_arguments(self, arguments):
+        for key, value in arguments.items():
+            if key in self._conditions:
+                attr = self._conditions[key]
+                if issubclass(attr.attr_type, Model):
+                    arguments[key] = attr.attr_type(**value)
+        return arguments
 
 class RouteFactory(RuleFactory):
 
