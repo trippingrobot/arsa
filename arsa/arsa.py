@@ -4,7 +4,6 @@ from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import HTTPException, Unauthorized, BadRequest
 from werkzeug.test import EnvironBuilder, run_wsgi_app
-from werkzeug.utils import escape
 
 from .routes import RouteFactory
 from .util import to_serializable
@@ -112,14 +111,16 @@ class Arsa(object):
 
                 body = rule.endpoint(**decoded_args)
 
-                response = Response(json.dumps(body, default=to_serializable), mimetype='application/json')
+                response = Response(
+                    json.dumps(body, default=to_serializable), mimetype='application/json'
+                )
                 return response(environ, start_response)
             except HTTPException as error:
-                body = json.dumps({
-                    "error": error.name,
-                    "description": error.description
-                })
-                resp = Response(body, error.code, error.get_headers(environ))
+                resp = Response(
+                    json.dumps(error, default=to_serializable),
+                    error.code,
+                    error.get_headers(environ)
+                )
                 return resp(environ, start_response)
 
         return app
