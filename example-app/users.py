@@ -10,7 +10,7 @@ app = Arsa()
 @app.route("/users")
 def list_users():
     """ Get users """
-    return [{'id':'124', 'name':'Bob Star', 'email':'bob@star.io'}]
+    return [{'id':'124', 'name':'Bob Star', 'email':'ed@arsa.io'}]
 
 @app.route("/users", methods=['POST'])
 @app.required(name=str)
@@ -34,4 +34,4 @@ def create_account(name, owner, **optional_kwargs):
     return {'id':'124', 'name':name, 'owner': owner, 'partner': optional_kwargs.get('partner', None)}
 
 
-handler = app.handle
+handler = app.handler
