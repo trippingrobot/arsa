@@ -59,10 +59,12 @@ class Arsa(object):
     def handler(self, event, context):
         app = self.create_app(check_token=False)
 
+        query_string = None
         if 'queryStringParameters' in event:
-            query_string = '?'.join(['{}={}'.format(k, v) for k, v in event['queryStringParameters'].items()])
-        else:
-            query_string = None
+            if isinstance(event['queryStringParameters'], dict):
+                query_string = '?'.join(
+                    ['{}={}'.format(k, v) for k, v in event['queryStringParameters'].items()]
+                )
 
         builder = EnvironBuilder(
             path=event['path'],
