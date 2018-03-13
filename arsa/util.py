@@ -20,5 +20,5 @@ def ts_aws_response(val):
         "isBase64Encoded": False,
         "statusCode": val.status_code,
         "headers": {},
-        "body": '{}'.format(val.get_data(as_text=True))
+        "body": "Hello World"
     }
