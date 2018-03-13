@@ -17,7 +17,7 @@ def ts_model(val):
 def ts_aws_response(val):
     """Used if *val* is an instance of our AWSResponse class."""
     return {
-        "isBase64Encoded": "false",
+        "isBase64Encoded": False,
         "statusCode": val.status_code,
         "headers": dict(val.headers.items()),
         "body": '{}'.format(val.get_data(as_text=True))
