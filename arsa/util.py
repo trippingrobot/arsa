@@ -1,4 +1,5 @@
 from functools import singledispatch
+import json
 
 from .model import Model
 from .response import AWSResponse
@@ -10,15 +11,15 @@ def to_serializable(val):
 
 @to_serializable.register(Model)
 def ts_model(val):
-    """Used if *val* is an instance of our Bar class."""
+    """Used if *val* is an instance of our Model class."""
     return val.attribute_values
 
 @to_serializable.register(AWSResponse)
 def ts_aws_response(val):
-    """Used if *val* is an instance of our Bar class."""
+    """Used if *val* is an instance of our AWSResponse class."""
     return {
         "isBase64Encoded": "false",
         "statusCode": val.status_code,
         "headers": dict(val.headers.items()),
-        "body": val.get_data(as_text=True)
+        "body": json.loads(val.get_data())
     }

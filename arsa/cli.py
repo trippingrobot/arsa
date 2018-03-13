@@ -16,7 +16,22 @@ from botocore.exceptions import ClientError
 from termcolor import colored
 from setuptools import find_packages
 
-from . import Arsa
+def _find_app(module):
+    from . import Arsa
+
+    # Search for the most common names first.
+    for attr_name in ('app', 'application'):
+        app = getattr(module, attr_name, None)
+        if isinstance(app, Arsa):
+            return app
+
+    # Otherwise find the only object that is a Arsa instance.
+    try:
+        app = next(v for k, v in module.__dict__.items() if isinstance(v, Arsa))
+        return app
+    except StopIteration as error:
+        raise click.ClickException(error)
+
 
 def _load_app(python_path, relpath=None):
     module = '.'.join(python_path.split('.')[:-1])
@@ -27,6 +42,11 @@ def _load_app(python_path, relpath=None):
 
     # Load the app
     __import__(module, globals(), locals(), func, 0)
+
+    module_code = sys.modules[module]
+    app = _find_app(module_code)
+
+    return app.create_app()
 
 def _get_config(path):
     full_path = os.path.join(path, 'arsa.json')
@@ -68,9 +88,7 @@ def run_command(host, port, path, reload):
     from werkzeug.serving import run_simple
 
     config = _get_config(path)
-    _load_app(config['handler'], relpath=path)
-
-    app = Arsa.create_app()
+    app = _load_app(config['handler'], relpath=path)
     run_simple(host, port, app, use_reloader=reload)
 
 @arsa.command('deploy', short_help='Deploy your API.')

@@ -11,71 +11,52 @@ from .response import AWSResponse
 
 class Arsa(object):
     """
-        Arsa is a singleton object that stores the configuration
+        Arsa is an object that stores the configuration
         needed for Arsa.io.
     """
 
-    __instance = None
+    def __init__(self):
+        self.factory = RouteFactory()
 
-    def __new__(cls):
-        if Arsa.__instance is None:
-            Arsa.__instance = object.__new__(cls)
-            Arsa.__instance.factory = RouteFactory()
-        return Arsa.__instance
-
-    @classmethod
-    def route(cls, rule, methods=None):
+    def route(self, rule, methods=None):
         """ Convenience decorator for defining a route """
         if methods is None:
             methods = ['GET']
 
         def decorator(func):
-            instance = cls()
-            route = instance.factory.register_endpoint(func)
+            route = self.factory.register_endpoint(func)
             route.set_rule(rule, methods)
             return func
 
         return decorator
 
 
-    @classmethod
-    def token_required(cls):
+    def token_required(self):
         def decorator(func):
-            instance = cls()
-            route = instance.factory.register_endpoint(func)
+            route = self.factory.register_endpoint(func)
             route.token_required = True
             return func
 
         return decorator
 
-    @classmethod
-    def required(cls, **expected_kwargs):
+    def required(self, **expected_kwargs):
         def decorator(func):
-            instance = cls()
-            route = instance.factory.register_endpoint(func)
+            route = self.factory.register_endpoint(func)
             route.add_validation(**expected_kwargs)
             return func
 
         return decorator
 
-    @classmethod
-    def optional(cls, **optional_kwargs):
+    def optional(self, **optional_kwargs):
         def decorator(func):
-            instance = cls()
-            route = instance.factory.register_endpoint(func)
+            route = self.factory.register_endpoint(func)
             route.add_validation(True, **optional_kwargs)
             return func
 
         return decorator
 
-    @classmethod
-    def empty(cls):
-        instance = cls()
-        instance.factory.empty()
-
-    @classmethod
-    def handle(cls, event, context):
-        app = cls.create_app(check_token=False)
+    def handle(self, event, context):
+        app = self.create_app(check_token=False)
 
         builder = EnvironBuilder(
             path=event['path'],
@@ -90,11 +71,9 @@ class Arsa(object):
 
         return json.dumps(response, default=to_serializable)
 
-    @classmethod
-    def create_app(cls, check_token=True):
+    def create_app(self, check_token=True):
 
-        instance = cls()
-        routes = Map(rules=[instance.factory]).bind('arsa.io')
+        routes = Map(rules=[self.factory]).bind('arsa.io')
 
         def app(environ, start_response):
             try:
