@@ -145,9 +145,18 @@ def test_handler(app):
     assert response['statusCode'] == 200
     assert response['body'] == '"response"'
 
-def test_error_handler(app):
+def test_data_handler(app):
     func = MagicMock(testfunc, return_value='response')
     app.route('/users', methods=['POST'])(app.required(name=str)(func))
+    event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/post_proxy.json')))
+
+    response = app.handler(event, {})
+    assert response['statusCode'] == 200
+    assert response['body'] == '"response"'
+
+def test_error_handler(app):
+    func = MagicMock(testfunc, return_value='response')
+    app.route('/users', methods=['POST'])(app.required(no=str)(func))
     event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/post_proxy.json')))
 
     response = app.handler(event, {})

@@ -59,10 +59,17 @@ class Arsa(object):
     def handler(self, event, context):
         app = self.create_app(check_token=False)
 
+        if 'queryStringParameters' in event:
+            query_string = '?'.join(['{}={}'.format(k, v) for k, v in event['queryStringParameters'].items()])
+        else:
+            query_string = None
+
         builder = EnvironBuilder(
             path=event['path'],
             method=event['httpMethod'],
-            headers=event['headers']
+            headers=event['headers'],
+            data=event['body'],
+            query_string=query_string
         )
         builder.close()
         resp = run_wsgi_app(app, builder.get_environ())
