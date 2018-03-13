@@ -17,6 +17,7 @@ class Arsa(object):
 
     def __init__(self):
         self.factory = RouteFactory()
+        self.routes = None
 
     def route(self, rule, methods=None):
         """ Convenience decorator for defining a route """
@@ -73,14 +74,15 @@ class Arsa(object):
 
     def create_app(self, check_token=True):
 
-        routes = Map(rules=[self.factory]).bind('arsa.io')
+        if not self.routes:
+            self.routes = Map(rules=[self.factory]).bind('arsa.io')
 
         def app(environ, start_response):
             try:
                 req = Request(environ)
 
                 # Find url rule
-                (rule, arguments) = routes.match(req.path, method=req.method, return_rule=True)
+                (rule, arguments) = self.routes.match(req.path, method=req.method, return_rule=True)
 
                 if check_token and rule.token_required and 'x-api-token' not in req.headers:
                     raise Unauthorized("Not token sent.")

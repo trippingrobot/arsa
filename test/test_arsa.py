@@ -145,3 +145,14 @@ def test_handler(app):
     decode = json.loads(response)
     assert decode['statusCode'] == 200
     assert decode['body'] == 'response'
+
+def test_handler2(app):
+    func = MagicMock(testfunc, return_value='response')
+    app.route('/users')(func)
+    event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/api_gateway_proxy.json')))
+
+    response = app.handle(event, {})
+    print(response)
+    decode = json.loads(response)
+    assert decode['statusCode'] == 200
+    assert decode['body'] == 'response'
