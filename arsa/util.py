@@ -1,5 +1,4 @@
 from functools import singledispatch
-import json
 
 from .model import Model
 from .response import AWSResponse
@@ -21,5 +20,5 @@ def ts_aws_response(val):
         "isBase64Encoded": "false",
         "statusCode": val.status_code,
         "headers": dict(val.headers.items()),
-        "body": json.loads(val.get_data())
+        "body": '{}'.format(val.get_data(as_text=True))
     }

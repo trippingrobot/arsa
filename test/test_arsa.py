@@ -1,6 +1,7 @@
 import pytest
 import json
 import os
+import base64
 from unittest.mock import MagicMock
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
@@ -144,15 +145,4 @@ def test_handler(app):
     print(response)
     decode = json.loads(response)
     assert decode['statusCode'] == 200
-    assert decode['body'] == 'response'
-
-def test_handler2(app):
-    func = MagicMock(testfunc, return_value='response')
-    app.route('/users')(func)
-    event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/api_gateway_proxy.json')))
-
-    response = app.handle(event, {})
-    print(response)
-    decode = json.loads(response)
-    assert decode['statusCode'] == 200
-    assert decode['body'] == 'response'
+    assert decode['body'] == '"response"'
