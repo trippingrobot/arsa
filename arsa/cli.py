@@ -2,43 +2,52 @@
 # -*- coding: utf-8 -*-
 """ Arsa command line script"""
 import os
+import json
+import re
+import shutil
+import zipfile
 import sys
+import io
+import uuid
+import subprocess
 import click
 import boto3
-from modulefinder import ModuleFinder
+from botocore.exceptions import ClientError
+from termcolor import colored
+from setuptools import find_packages
 
 from . import Arsa
-from .exceptions import NoCredentailsFoundError
 
-def setup_path(path):
-    """Given a filename this will try to calculate the python path, add it
-    to the search path and return the actual module name that is expected.
-    """
-    path = os.path.realpath(path)
+def _load_app(python_path, relpath=None):
+    module = '.'.join(python_path.split('.')[:-1])
+    func = python_path.split('.')[-1:]
 
-    # remove py extension
-    if os.path.splitext(path)[1] == '.py':
-        path = os.path.splitext(path)[0]
+    if relpath and sys.path[0] != relpath:
+        sys.path.insert(0, relpath)
 
-    # Check to see if __init__ is in the path
-    if os.path.basename(path) == '__init__':
-        path = os.path.dirname(path)
+    # Load the app
+    __import__(module, globals(), locals(), func, 0)
 
-    module_name = []
+def _get_config(path):
+    full_path = os.path.join(path, 'arsa.json')
+    if not os.path.isfile(full_path):
+        raise click.ClickException('Configuration file not found {}'.format(full_path))
 
-    # move up until outside package structure (no __init__.py)
-    while True:
-        path, name = os.path.split(path)
-        module_name.append(name)
+    config = json.load(open(full_path))
 
-        if not os.path.exists(os.path.join(path, '__init__.py')):
-            break
+    required = ['handler', 'requirements', 'name']
 
-    if sys.path[0] != path:
-        sys.path.insert(0, path)
+    if all(key not in config for key in required):
+        raise click.ClickException('Invalid configuration file.')
 
-    return '.'.join(module_name[::-1])
+    return config
 
+def _find_root_modules(path):
+    return [f for f in os.listdir(path) if re.match(r'^.*\.py$', f)]
+
+def _resource_not_found(error):
+    code = error.response.get('Error', {}).get('Code', 'Unknown')
+    return code == 'ResourceNotFoundException'
 
 @click.group()
 def arsa():
@@ -50,8 +59,7 @@ def arsa():
               help='The interface to bind to.')
 @click.option('--port', '-p', default=5000,
               help='The port to bind to.')
-@click.option('--path', default='handler.py',
-              help='The path to the file or module containing the arsa configuration.')
+@click.option('--path', default=os.curdir, help='Path to an arsa app if not in root directory.')
 @click.option('--reload/--no-reload', default=None,
               help='Enable or disable the reloader.')
 def run_command(host, port, path, reload):
@@ -59,8 +67,8 @@ def run_command(host, port, path, reload):
 
     from werkzeug.serving import run_simple
 
-    import_path = setup_path(path)
-    __import__(import_path)
+    config = _get_config(path)
+    _load_app(config['handler'], relpath=path)
 
     app = Arsa.create_app()
     run_simple(host, port, app, use_reloader=reload)
@@ -68,44 +76,180 @@ def run_command(host, port, path, reload):
 @arsa.command('deploy', short_help='Deploy your API.')
 @click.option('--stage', '-s', default='v1',
               help='The stage to deploy your api to e.g. "v1", "production", "canary"')
-@click.option('--path', default='handler.py',
-              help='The path to the file or module containing the arsa configuration.')
+@click.option('--path', default=os.curdir, help='Path to an arsa app if not in root directory.')
 @click.option('--region', default='us-east-1')
 def deploy_command(stage, path, region):
+    build_id = str(uuid.uuid4())
+    build_path = os.path.join(os.curdir, '.arsa-build')
 
-    # TODO: Load the configuration
-    name = 'app_name'
-    modules = []
+    config = _get_config(path)
 
-    # Load the app
-    import_path = setup_path(path)
-    __import__(import_path)
-
-    app = Arsa()
+    packages = find_packages(where=path, exclude=['tests', 'test']) + _find_root_modules(path)
 
     # Check for credentials
     session = boto3.Session(region_name=region)
     if session.get_credentials() is None:
         raise click.ClickException('No Arsa or AWS credentials were found.')
 
-    # TODO: Build package. Will install dependencys+arsa into .arsa-build folder
-        # TODO: mkdir -p .arsa-build
-        # TODO: pip install <dep> -t .arsa-build/
-        # TODO: copy any local python packages and files
-        # TODO: zip pacakge
+    account_id = session.client('sts').get_caller_identity().get('Account')
 
-    # TODO: Upload package
-    # TODO: Create or update Lambda function
-    # TODO: Create API Gateway api if doesn't exist.
-    # TODO: Create or update stage
-    # TODO: Create or update stage variables
+    # clean out build path
+    print(colored('Building package...', 'green'))
+    if os.path.exists(build_path):
+        shutil.rmtree(build_path)
+    os.makedirs(build_path)
 
-    # TODO: Create an api resource for each
-    routes = app.factory.get_rules({})
-    for route in routes:
-        print(route.rule)
+    # install packages
+    fnull = open(os.devnull, 'w')
+    subprocess.check_call([
+        'pip',
+        'install',
+        '-r',
+        os.path.join(path, config['requirements']),
+        '-t',
+        build_path
+    ], stdout=fnull)
 
-    # TODO: Deploy to stage
+    for module in packages:
+        src = os.path.join(path, module)
+        dst = os.path.join(build_path, module)
+        if os.path.isdir(src):
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns('*.pyc'))
+        else:
+            shutil.copy(src, dst)
+
+
+
+    # zip together for distribution
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w') as myzip:
+        for base, _, files in os.walk(build_path, followlinks=True):
+            for file in files:
+                path = os.path.join(base, file)
+                myzip.write(path, path.replace(build_path + '/', ''))
+
+
+    lamba_client = session.client('lambda')
+    function_name = '{}:arsa-{}'.format(account_id, config['name'])
+
+    # Upload package
+    print(colored('Uploading package...', 'green'))
+    try:
+        resp = lamba_client.update_function_code(
+            FunctionName=function_name,
+            ZipFile=buf.getvalue()
+        )
+        revision_id = resp['RevisionId']
+    except ClientError as error:
+        if _resource_not_found(error):
+            resp = lamba_client.create_function(
+                FunctionName=function_name,
+                Runtime='python3.6',
+                Role='arn:aws:iam::909533743566:role/development-lambda_exec_role',
+                Handler=config['handler'],
+                Code={
+                    'ZipFile': buf.getvalue()
+                }
+            )
+            revision_id = resp['RevisionId']
+        else:
+            raise error
+
+    # Publish version
+    print(colored('Publishing lambda function...', 'green'))
+    resp = lamba_client.publish_version(
+        FunctionName=function_name,
+        Description=build_id,
+        RevisionId=revision_id
+    )
+    version_id = resp['Version']
+
+    print(colored('Creating alias to stage...', 'green'))
+    try:
+        lamba_client.update_alias(
+            FunctionName=function_name,
+            Name=stage,
+            FunctionVersion=version_id
+        )
+    except ClientError as error:
+        if _resource_not_found(error):
+            lamba_client.create_alias(
+                FunctionName=function_name,
+                Name=stage,
+                FunctionVersion=version_id
+            )
+        else:
+            raise error
+
+    api_client = session.client('apigateway')
+    api_name = 'arsa-{}'.format(config['name'])
+
+    try:
+        apis = api_client.get_rest_apis()
+        rest_api_id = next(item['id'] for item in apis['items'] if item['name'] == api_name)
+    except StopIteration:
+        print(colored('Creating new api gateway...', 'yellow'))
+
+        # Create Rest API
+        resp = api_client.create_rest_api(
+            name=api_name
+        )
+        rest_api_id = resp['id']
+
+
+    resources = api_client.get_resources(restApiId=rest_api_id)
+    try:
+        # Get resource id
+        resource_id = next(item['id'] for item in resources['items'] if item['path'] == '/{proxy+}')
+    except StopIteration:
+        print(colored('Creating new proxy resource...', 'yellow'))
+        parent_id = next(item['id'] for item in resources['items'] if item['path'] == '/')
+
+        # Create proxy resource
+        resp = api_client.create_resource(
+            restApiId=rest_api_id,
+            parentId=parent_id,
+            pathPart='{proxy+}'
+        )
+        resource_id = resp['id']
+
+        # Setup ANY method
+        resp = api_client.put_method(
+            restApiId=rest_api_id,
+            resourceId=resource_id,
+            httpMethod='ANY',
+            authorizationType='NONE'
+        )
+
+        stage_variable = '${stageVariables.lbfunction}'
+        api_client.put_integration(
+            restApiId=rest_api_id,
+            resourceId=resource_id,
+            httpMethod='ANY',
+            integrationHttpMethod='POST',
+            type='AWS_PROXY',
+            uri='arn:aws:apigateway:{region}:lambda:path/2015-03-31/functions/arn:aws:lambda:{region}:{account_id}:function:{stage_variable}/invocations'.format(
+                region=region,
+                account_id=account_id,
+                stage_variable=stage_variable)
+        )
+
+    print(colored('Creating deployment...', 'green'))
+    api_client.create_deployment(
+        restApiId=rest_api_id,
+        stageName=stage,
+        variables={
+            'lbfunction': '{}:{}'.format(api_name, stage)
+        }
+    )
+
+    print(colored('\nCongratulations your api is deployed at:\n', 'green'))
+    print(colored('https://{rest_api_id}.execute-api.{region}.amazonaws.com/{stage}'.format(
+        rest_api_id=rest_api_id,
+        region=region,
+        stage=stage
+    ), 'blue'))
+
 
 def main():
     """ main method """

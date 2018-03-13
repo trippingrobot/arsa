@@ -1,5 +1,6 @@
 import pytest
 import json
+import os
 from unittest.mock import MagicMock
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
@@ -134,3 +135,14 @@ def test_validate_route_with_model():
     response = client.get('/val', data=json.dumps({'tester':{'name':'Bob'}}))
     assert response.status_code == 200
     assert response.data == b'"Bob"'
+
+def test_handler():
+    func = MagicMock(testfunc, return_value='response')
+    Arsa.route('/path/to/resource')(func)
+    event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/api_gateway_proxy.json')))
+
+    response = Arsa.handle(event, {})
+
+    decode = json.loads(response)
+    assert decode['statusCode'] == 200
+    assert decode['body'] == '"response"'

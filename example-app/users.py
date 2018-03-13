@@ -30,3 +30,7 @@ def get_account(account_id):
 def create_account(name, owner, **optional_kwargs):
     """ Create account and make sure 'name' parameter is passed as a string """
     return {'id':'124', 'name':name, 'owner': owner, 'partner': optional_kwargs.get('partner', None)}
+
+
+def handler(event, context):
+    return Arsa.handle(event, context)

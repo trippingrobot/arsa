@@ -3,9 +3,11 @@ import json
 from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import HTTPException, Unauthorized, BadRequest
+from werkzeug.test import EnvironBuilder, run_wsgi_app
 
 from .routes import RouteFactory
 from .util import to_serializable
+from .response import AWSResponse
 
 class Arsa(object):
     """
@@ -70,6 +72,23 @@ class Arsa(object):
     def empty(cls):
         instance = cls()
         instance.factory.empty()
+
+    @classmethod
+    def handle(cls, event, context):
+        app = cls.create_app(check_token=False)
+
+        builder = EnvironBuilder(
+            path=event['path'],
+            method=event['httpMethod'],
+            headers=event['headers']
+        )
+        builder.close()
+        resp = run_wsgi_app(app, builder.get_environ())
+
+        #wrap response
+        response = AWSResponse(*resp)
+
+        return json.dumps(response, default=to_serializable)
 
     @classmethod
     def create_app(cls, check_token=True):
