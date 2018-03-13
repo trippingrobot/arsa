@@ -1,2 +1,1 @@
-six
 git+git://github.com/trippingrobot/arsa-sdk-python@dev
