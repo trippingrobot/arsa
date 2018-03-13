@@ -142,7 +142,5 @@ def test_handler(app):
     event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/api_gateway_proxy.json')))
 
     response = app.handle(event, {})
-    print(response)
-    decode = json.loads(response)
-    assert decode['statusCode'] == 200
-    assert decode['body'] == '"response"'
+    assert response['statusCode'] == 200
+    assert response['body'] == '"response"'

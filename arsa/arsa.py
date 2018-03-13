@@ -70,7 +70,10 @@ class Arsa(object):
         #wrap response
         response = AWSResponse(*resp)
 
-        return json.dumps(response, default=to_serializable)
+        return {
+            "statusCode": 200,
+            "body": '{"name":"test"}'
+        }
 
     def create_app(self, check_token=True):
 
