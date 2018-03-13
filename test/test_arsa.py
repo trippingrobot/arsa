@@ -137,10 +137,11 @@ def test_validate_route_with_model(app):
     assert response.data == b'"Bob"'
 
 def test_handler(app):
-    func = MagicMock(testfunc, return_value=[{'id':'124', 'name':'Bob Star', 'email':'bob@star.io'}])
+    func = MagicMock(testfunc, return_value='response')
     app.route('/users')(func)
     event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/api_gateway_proxy.json')))
 
     response = app.handle(event, {})
+    print(response)
     assert response['statusCode'] == 200
     assert response['body'] == '"response"'

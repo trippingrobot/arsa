@@ -7,7 +7,6 @@ from werkzeug.test import EnvironBuilder, run_wsgi_app
 
 from .routes import RouteFactory
 from .util import to_serializable
-from .response import AWSResponse
 
 class Arsa(object):
     """
@@ -68,11 +67,11 @@ class Arsa(object):
         resp = run_wsgi_app(app, builder.get_environ())
 
         #wrap response
-        response = AWSResponse(*resp)
+        response = Response(*resp)
 
         return {
-            "statusCode": 200,
-            "body": '{"name":"test"}'
+            "statusCode": response.status_code,
+            "body": response.get_data(as_text=True)
         }
 
     def create_app(self, check_token=True):
