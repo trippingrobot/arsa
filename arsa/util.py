@@ -18,5 +18,5 @@ def ts_aws_response(val):
     """Used if *val* is an instance of our AWSResponse class."""
     return {
         "statusCode": val.status_code,
-        "body": "Hello World"
+        "body": '{"name":"test"}'
     }
