@@ -73,6 +73,25 @@ def _resource_not_found(error):
     code = error.response.get('Error', {}).get('Code', 'Unknown')
     return code == 'ResourceNotFoundException'
 
+def _entity_not_found(error):
+    code = error.response.get('Error', {}).get('Code', 'Unknown')
+    return code == 'NoSuchEntity'
+
+def _get_lambda_policy(config):
+    actions = list(set(['logs:*']) | set(config.get('allowed_actions', [])))
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": actions,
+                "Resource": "*"
+            }
+        ]
+    }
+
+    return json.dumps(policy)
+
 @click.group()
 def arsa():
     """ command group for arsa """
@@ -125,6 +144,7 @@ def deploy_command(stage, path, region):
     build_path = os.path.join(os.curdir, '.arsa-build')
 
     config = _get_config(path)
+    api_name = 'arsa-{}'.format(config['name'])
 
     packages = find_packages(where=path, exclude=['tests', 'test']) + _find_root_modules(path)
 
@@ -171,11 +191,67 @@ def deploy_command(stage, path, region):
                 myzip.write(path, path.replace(build_path + '/', ''))
 
 
-    lamba_client = session.client('lambda')
-    function_name = '{}:arsa-{}'.format(account_id, config['name'])
+    # Create lambda execution role
+    iam_client = session.client('iam')
+
+    role_name = '{}-execution-role'.format(api_name)
+    try:
+        resp = iam_client.get_role(RoleName=role_name)
+        role_arn = resp['Role']['Arn']
+    except ClientError as error:
+        if _entity_not_found(error):
+            click.secho('Creating new lambda role...', fg='yellow')
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "lambda.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            }
+
+            resp = iam_client.create_role(
+                RoleName=role_name,
+                AssumeRolePolicyDocument=json.dumps(policy),
+                Description='Arsa lambda execution role'
+            )
+            role_arn = resp['Role']['Arn']
+        else:
+            raise error
+
+    # Attach role policy for lambda function
+    click.secho('Setting permissions to execution role...', fg='green')
+    iam_client.put_role_policy(
+        RoleName=role_name,
+        PolicyName='arsa-lambda-permissions',
+        PolicyDocument=_get_lambda_policy(config)
+    )
+
+    # Create API Gatway
+    api_client = session.client('apigateway')
+    try:
+        apis = api_client.get_rest_apis()
+        rest_api_id = next(item['id'] for item in apis['items'] if item['name'] == api_name)
+    except StopIteration:
+        click.secho('Creating new api gateway...', fg='yellow')
+
+        # Create Rest API
+        resp = api_client.create_rest_api(
+            name=api_name
+        )
+        rest_api_id = resp['id']
+
 
     # Upload package
     click.secho('Uploading package...', fg='green')
+
+    lamba_client = session.client('lambda')
+    function_name = '{}:{}'.format(account_id, api_name)
     try:
         resp = lamba_client.update_function_code(
             FunctionName=function_name,
@@ -184,10 +260,11 @@ def deploy_command(stage, path, region):
         revision_id = resp['RevisionId']
     except ClientError as error:
         if _resource_not_found(error):
+            click.secho('Creating new lambda function...', fg='yellow')
             resp = lamba_client.create_function(
                 FunctionName=function_name,
                 Runtime='python3.6',
-                Role='arn:aws:iam::909533743566:role/development-lambda_exec_role',
+                Role=role_arn,
                 Handler=config['handler'],
                 Code={
                     'ZipFile': buf.getvalue()
@@ -206,7 +283,7 @@ def deploy_command(stage, path, region):
     )
     version_id = resp['Version']
 
-    click.secho('Creating alias to stage...', fg='green')
+    click.secho('Setting alias to stage...', fg='green')
     try:
         lamba_client.update_alias(
             FunctionName=function_name,
@@ -215,28 +292,28 @@ def deploy_command(stage, path, region):
         )
     except ClientError as error:
         if _resource_not_found(error):
+            click.secho('Creating new alias...', fg='yellow')
             lamba_client.create_alias(
                 FunctionName=function_name,
                 Name=stage,
                 FunctionVersion=version_id
             )
+
+            source_arn = 'arn:aws:execute-api:{region}:{account_id}:{api_id}/{stage}/*/*'.format(
+                region=region,
+                account_id=account_id,
+                api_id=rest_api_id,
+                stage=stage
+            )
+            lamba_client.add_permission(
+                FunctionName='{}:{}'.format(function_name, stage),
+                StatementId='arsa-statement-permission-{}'.format(stage),
+                Action='lambda:InvokeFunction',
+                Principal='apigateway.amazonaws.com',
+                SourceArn=source_arn
+            )
         else:
             raise error
-
-    api_client = session.client('apigateway')
-    api_name = 'arsa-{}'.format(config['name'])
-
-    try:
-        apis = api_client.get_rest_apis()
-        rest_api_id = next(item['id'] for item in apis['items'] if item['name'] == api_name)
-    except StopIteration:
-        click.secho('Creating new api gateway...', fg='yellow')
-
-        # Create Rest API
-        resp = api_client.create_rest_api(
-            name=api_name
-        )
-        rest_api_id = resp['id']
 
 
     resources = api_client.get_resources(restApiId=rest_api_id)
