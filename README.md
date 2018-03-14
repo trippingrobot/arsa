@@ -40,8 +40,7 @@ def list_users():
 @app.optional(email=str)
 def create_user(name, **optional_kwargs):
     """ Create user if client is authenticated """
-    email = optional_kwargs['email'] if 'email' in optional_kwargs else None
-    return {'id':'124', 'name':name, 'email':email}
+    return {'id':'124', 'name':name, 'email':optional_kwargs.get('email', None)}
 
 @app.route("/accounts/<account_id>")
 def get_account(account_id):
@@ -65,7 +64,7 @@ Test your API
 ```
 arsa run
 
-curl http://localhost:3000/users
+curl http://localhost:5000/users
 ```
 
 Deploy your API to arsa.io
