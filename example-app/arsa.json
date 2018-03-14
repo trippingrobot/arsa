@@ -1,5 +1,4 @@
 {
   "name": "example-app",
-  "handler": "users.handler",
-  "requirements": "requirements.txt"
+  "handler": "users.handler"
 }

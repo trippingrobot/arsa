@@ -16,6 +16,8 @@ from botocore.exceptions import ClientError
 from termcolor import colored
 from setuptools import find_packages
 
+from . import __version__ as release
+
 def _find_app(module):
     from . import Arsa
 
@@ -55,10 +57,13 @@ def _get_config(path):
 
     config = json.load(open(full_path))
 
-    required = ['handler', 'requirements', 'name']
+    required = ['handler', 'name']
 
     if all(key not in config for key in required):
         raise click.ClickException('Invalid configuration file.')
+
+    if 'requirements' not in config:
+        config['requirements']: 'requirements.txt'
 
     return config
 
@@ -73,6 +78,26 @@ def _resource_not_found(error):
 def arsa():
     """ command group for arsa """
     pass
+
+@arsa.command('config', short_help='Configure project for Arsa.')
+@click.option('--path', default=os.curdir, help='Path to an arsa app if not in root directory.')
+def run_config(path):
+    """ Configure project for Arsa by generating a json configuration """
+    name = click.prompt('API Name', default=os.path.basename(os.getcwd()), type=str)
+    handler = click.prompt('Handler Function', default='api.handler', type=str)
+
+    # Create requirements file if it doesn't exsit
+    full_req_path = os.path.join(path, 'requirements.txt')
+    if not os.path.isfile(full_req_path):
+        with open(full_req_path, 'w') as reqfile:
+            reqfile.write('arsa>={}'.format(release))
+
+    # Create arsa config file if it doesn't exsit
+    full_config_path = os.path.join(path, 'arsa.json')
+    if not os.path.isfile(full_config_path):
+        with open(full_config_path, 'w') as configfile:
+            json.dump({"name": name, "handler": handler}, configfile, indent=4)
+
 
 @arsa.command('run', short_help='Runs a development server.')
 @click.option('--host', '-h', default='127.0.0.1',
