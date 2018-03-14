@@ -38,6 +38,11 @@ class Model(object):
         self.attribute_values = {}
         self._set_attributes(**attributes)
 
+    @property
+    def attributes(self):
+        """ Get defined attribute values """
+        return self.attribute_values
+
     def _set_attributes(self, **attributes):
         """
         Sets the attributes for this object
