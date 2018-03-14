@@ -11,7 +11,6 @@ setup(
     packages=['arsa'],
     tests_require=['pytest'],
     install_requires=[
-        'termcolor>=1.1.0',
         'click>=5.1',
         'Werkzeug>=0.14'
     ],

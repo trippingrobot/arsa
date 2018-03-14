@@ -13,7 +13,6 @@ import subprocess
 import click
 import boto3
 from botocore.exceptions import ClientError
-from termcolor import colored
 from setuptools import find_packages
 
 from . import __version__ as release
@@ -63,7 +62,7 @@ def _get_config(path):
         raise click.ClickException('Invalid configuration file.')
 
     if 'requirements' not in config:
-        config['requirements']: 'requirements.txt'
+        config['requirements'] = 'requirements.txt'
 
     return config
 
@@ -137,7 +136,7 @@ def deploy_command(stage, path, region):
     account_id = session.client('sts').get_caller_identity().get('Account')
 
     # clean out build path
-    print(colored('Building package...', 'green'))
+    click.secho('Building package...', fg='green')
     if os.path.exists(build_path):
         shutil.rmtree(build_path)
     os.makedirs(build_path)
@@ -176,7 +175,7 @@ def deploy_command(stage, path, region):
     function_name = '{}:arsa-{}'.format(account_id, config['name'])
 
     # Upload package
-    print(colored('Uploading package...', 'green'))
+    click.secho('Uploading package...', fg='green')
     try:
         resp = lamba_client.update_function_code(
             FunctionName=function_name,
@@ -199,7 +198,7 @@ def deploy_command(stage, path, region):
             raise error
 
     # Publish version
-    print(colored('Publishing lambda function...', 'green'))
+    click.secho('Publishing lambda function...', fg='green')
     resp = lamba_client.publish_version(
         FunctionName=function_name,
         Description=build_id,
@@ -207,7 +206,7 @@ def deploy_command(stage, path, region):
     )
     version_id = resp['Version']
 
-    print(colored('Creating alias to stage...', 'green'))
+    click.secho('Creating alias to stage...', fg='green')
     try:
         lamba_client.update_alias(
             FunctionName=function_name,
@@ -231,7 +230,7 @@ def deploy_command(stage, path, region):
         apis = api_client.get_rest_apis()
         rest_api_id = next(item['id'] for item in apis['items'] if item['name'] == api_name)
     except StopIteration:
-        print(colored('Creating new api gateway...', 'yellow'))
+        click.secho('Creating new api gateway...', fg='yellow')
 
         # Create Rest API
         resp = api_client.create_rest_api(
@@ -245,7 +244,7 @@ def deploy_command(stage, path, region):
         # Get resource id
         resource_id = next(item['id'] for item in resources['items'] if item['path'] == '/{proxy+}')
     except StopIteration:
-        print(colored('Creating new proxy resource...', 'yellow'))
+        click.secho('Creating new proxy resource...', fg='yellow')
         parent_id = next(item['id'] for item in resources['items'] if item['path'] == '/')
 
         # Create proxy resource
@@ -277,7 +276,7 @@ def deploy_command(stage, path, region):
                 stage_variable=stage_variable)
         )
 
-    print(colored('Creating deployment...', 'green'))
+    click.secho('Creating deployment...', fg='green')
     api_client.create_deployment(
         restApiId=rest_api_id,
         stageName=stage,
@@ -286,13 +285,12 @@ def deploy_command(stage, path, region):
         }
     )
 
-    print(colored('\nCongratulations your api is deployed at:\n', 'green'))
-    print(colored('https://{rest_api_id}.execute-api.{region}.amazonaws.com/{stage}'.format(
+    click.secho('\nCongratulations your api is deployed at:\n', fg='green')
+    click.secho('https://{rest_api_id}.execute-api.{region}.amazonaws.com/{stage}'.format(
         rest_api_id=rest_api_id,
         region=region,
         stage=stage
-    ), 'blue'))
-
+    ), fg='blue', bold=True)
 
 def main():
     """ main method """
