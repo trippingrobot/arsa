@@ -10,7 +10,7 @@ def to_serializable(val):
 @to_serializable.register(Model)
 def ts_model(val):
     """Used if *val* is an instance of our Model class."""
-    return val.attribute_values
+    return val.attributes
 
 @to_serializable.register(HTTPException)
 def ts_model(val):
