@@ -83,8 +83,6 @@ class Model(object):
 def valid_arguments(name, arguments, attributes):
 
     def valid_argument(name, argument, attribute):
-        print('Name:{} Argument:{} Attribute:{}'.format(name, argument, attribute))
-
         if isinstance(attribute.attr_type, ModelMeta):
             valid_arguments(name, argument, attribute.attr_type._get_attributes())
         elif issubclass(attribute.attr_type, list):
