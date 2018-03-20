@@ -55,6 +55,9 @@ class Model(object):
     def __iter__(self):
         return iter(self.attribute_values)
 
+    def __getitem__(self, item):
+        return self.attribute_values[item]
+
     def _set_attributes(self, **attributes):
         """
         Sets the attributes for this object
