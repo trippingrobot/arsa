@@ -69,6 +69,9 @@ class Model(object):
             attr = self._get_attributes().get(attr_name)
             if isinstance(attr.attr_type, ModelMeta):
                 setattr(self, attr_name, attr.attr_type(**attr_value))
+            elif isinstance(attr, ListAttribute):
+                attrs = [attr.typeof(**a) if not isinstance(a, Model) else a for a in attr_value]
+                setattr(self, attr_name, attrs)
             else:
                 setattr(self, attr_name, attr_value)
 

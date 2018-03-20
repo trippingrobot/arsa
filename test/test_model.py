@@ -26,6 +26,7 @@ def test_list_attribute():
     foo = FooModel(name='bar')
     model = FooBarsModel(foos=[foo])
     assert len(model.foos) == 1
+    assert model.foos[0].name == 'bar'
 
     conditions = {
         'foobars': Attribute(FooBarsModel)
@@ -58,3 +59,25 @@ def test__invalid_list_attribute():
 
     with pytest.raises(ArgumentKeyError):
         valid_arguments(__name__, arguments, conditions)
+
+def test_raw_list_attribute():
+
+    model = FooBarsModel(**{'foos':[{'name':'bar'}]})
+    assert len(model.foos) == 1
+    assert model.foos[0].name == 'bar'
+
+
+    conditions = {
+        'foobars': Attribute(FooBarsModel)
+    }
+    arguments = {
+        'foobars':{
+            'foos':[
+                {
+                    'name':'bar'
+                }
+            ]
+        }
+    }
+
+    valid_arguments(__name__, arguments, conditions)
