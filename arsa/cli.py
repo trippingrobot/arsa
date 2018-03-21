@@ -177,10 +177,8 @@ def deploy_command(stage, path, region):
         dst = os.path.join(build_path, module)
         if os.path.isdir(src):
             shutil.copytree(src, dst, ignore=shutil.ignore_patterns('*.pyc'))
-        else:
+        elif os.path.isfile(src):
             shutil.copy(src, dst)
-
-
 
     # zip together for distribution
     buf = io.BytesIO()
