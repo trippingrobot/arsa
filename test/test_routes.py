@@ -46,3 +46,10 @@ def test_decode_complex_model():
     decoded = route.decode_arguments({'obj': {'test':{'name':'foobar'}}})
     assert decoded['obj'].test.name == 'foobar'
     assert decoded['obj'].test.phone is None
+
+def test_reserved_route():
+    func = MagicMock(testfunc, return_value=True)
+    route = Route(func)
+
+    with pytest.raises(ValueError):
+        route.add_validation(query=bool)

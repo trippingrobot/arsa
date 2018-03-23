@@ -98,13 +98,15 @@ class Arsa(object):
                 if check_token and rule.token_required and 'x-api-token' not in req.headers:
                     raise Unauthorized("Not token sent.")
 
-
                 if req.data:
                     try:
                         data = json.loads(req.data)
                         arguments.update(data)
                     except ValueError:
                         raise BadRequest("JSON body was malformed")
+
+                if req.args:
+                    arguments.update({'query': dict(req.args)})
 
                 rule.has_valid_arguments(arguments)
                 decoded_args = rule.decode_arguments(arguments)

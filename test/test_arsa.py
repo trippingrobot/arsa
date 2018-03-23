@@ -83,6 +83,7 @@ def test_invalid_route_value(app):
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/val', data={'name':'Bob'})
     assert response.status_code == 400
+    
 
 def test_optional_route_value(app):
     func = MagicMock(testfunc, return_value='response')
@@ -162,3 +163,12 @@ def test_error_handler(app):
     response = app.handler(event, {})
 
     assert response['statusCode'] == 400
+
+def test_get_route_with_query_params(app):
+    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['query']['happy'])
+    app.route('/foobar')(func)
+
+    client = Client(app.create_app(), response_wrapper=Response)
+    response = client.get('/foobar?bob=star&happy=lucky')
+    assert response.status_code == 200
+    assert response.data == b'["lucky"]'

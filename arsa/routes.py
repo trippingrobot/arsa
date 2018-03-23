@@ -33,6 +33,9 @@ class Route(Rule):
             self.methods = set([x.upper() for x in methods])
 
     def add_validation(self, optional=False, **conditions):
+        if 'query' in conditions:
+            raise ValueError('The query named parameter is reserved.')
+
         conditions = {k: Attribute(v, optional=optional) for k, v in conditions.items()}
         self._conditions.update(conditions)
 
