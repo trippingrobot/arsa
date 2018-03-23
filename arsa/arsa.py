@@ -7,6 +7,7 @@ from werkzeug.test import EnvironBuilder, run_wsgi_app
 
 from .routes import RouteFactory
 from .util import to_serializable
+from .policy import Policy
 
 class Arsa(object):
     """
@@ -17,6 +18,8 @@ class Arsa(object):
     def __init__(self):
         self.factory = RouteFactory()
         self.routes = None
+
+        self.authorizer_func = None
 
     def route(self, rule, methods=None):
         """ Convenience decorator for defining a route """
@@ -31,10 +34,10 @@ class Arsa(object):
         return decorator
 
 
-    def token_required(self):
+    def authorizer(self):
+        """ Set the authorizer function """
         def decorator(func):
-            route = self.factory.register_endpoint(func)
-            route.token_required = True
+            self.authorizer_func = func
             return func
 
         return decorator
@@ -82,6 +85,14 @@ class Arsa(object):
             "statusCode": response.status_code,
             "body": response.get_data(as_text=True)
         }
+
+    def authorize(self, auth_event):
+        policy = Policy(auth_event['authorizationToken'], auth_event['methodArn'], allow=True)
+
+        if self.authorizer_func:
+            policy = self.authorizer_func(auth_event)
+
+        return policy.as_dict()
 
     def create_app(self, check_token=True):
 

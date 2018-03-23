@@ -7,7 +7,7 @@ from werkzeug.test import Client
 from werkzeug.wrappers import Response
 from arsa import Arsa
 from arsa.model import Model, Attribute
-
+from arsa.policy import Policy
 
 class SampleModel(Model):
     name = Attribute(str)
@@ -83,7 +83,7 @@ def test_invalid_route_value(app):
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/val', data={'name':'Bob'})
     assert response.status_code == 400
-    
+
 
 def test_optional_route_value(app):
     func = MagicMock(testfunc, return_value='response')
@@ -102,31 +102,18 @@ def test_optional_invalid_route_value(app):
     response = client.get('/val', data=json.dumps({'name':123}))
     assert response.status_code == 400
 
-def test_get_route_with_auth(app):
-    func = MagicMock(testfunc, return_value='response')
-    app.route('/foobar')(app.token_required()(func))
+def test_auth(app):
+    res = app.authorize({'type':'TOKEN', 'authorizationToken':'sampletoken', 'methodArn':'arn://'})
+    assert res['policyDocument']['Statement'][0]['Effect'] == 'Allow'
 
-    client = Client(app.create_app(), response_wrapper=Response)
-    response = client.get('/foobar', headers={"x-api-token":"1234"})
-    assert response.status_code == 200
-    assert response.data == b'"response"'
-
-def test_get_route_without_auth(app):
-    func = MagicMock(testfunc, return_value='response')
-    app.route('/foobar')(app.token_required()(func))
-
-    client = Client(app.create_app(), response_wrapper=Response)
-    response = client.get('/foobar')
-    assert response.status_code == 401
-
-def test_token_bypass(app):
-    func = MagicMock(testfunc, return_value='response')
-    app.route('/foobar')(app.token_required()(func))
-
-    client = Client(app.create_app(check_token=False), response_wrapper=Response)
-    response = client.get('/foobar')
-    assert response.status_code == 200
-    assert response.data == b'"response"'
+def test_custom_auth(app):
+    deny = Policy('user', 'arn', allow=False, context={'custom_attr':'string'})
+    func = MagicMock(testfunc, return_value=deny)
+    app.authorizer()(func)
+    res = app.authorize({'type':'TOKEN', 'authorizationToken':'sampletoken', 'methodArn':'arn://'})
+    assert res['policyDocument']['Statement'][0]['Effect'] == 'Deny'
+    assert res['principalId'] == 'user'
+    assert res['context']['custom_attr'] == 'string'
 
 def test_validate_route_with_model(app):
     func = MagicMock(testfunc, side_effect=lambda tester: tester.name)

@@ -1,4 +1,11 @@
 {
   "name": "example-app",
-  "handler": "users.handler"
+  "handler": "users.handler",
+  "authorization": {
+    "handler": "users.authorize",
+    "type": "lambda",
+    "token_source": "x-api-token",
+    "token_validation": ".*",
+    "ttl": 300
+  }
 }

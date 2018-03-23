@@ -1,5 +1,6 @@
 from arsa import Arsa
 from arsa.model import Model, Attribute
+from arsa.policy import Policy
 
 class Person(Model):
     name = Attribute(str)
@@ -26,7 +27,6 @@ def get_account(account_id):
     return [{'id':account_id, 'name':'Acme Inc.', 'email':'support@acme.io'}]
 
 @app.route("/accounts", methods=['POST'])
-@app.token_required()
 @app.required(name=str, owner=Person)
 @app.optional(partner=Person)
 def create_account(name, owner, **optional_kwargs):
@@ -34,4 +34,13 @@ def create_account(name, owner, **optional_kwargs):
     return {'id':'124', 'name':name, 'owner': owner, 'partner': optional_kwargs.get('partner', None)}
 
 
+@app.authorizer
+def custom_auth(auth_event):
+    # TODO: Check for authorization
+    principal_id = auth_event['authorizationToken']
+    arn = auth_event['methodArn']
+    return Policy(principal_id, arn, allow=True) # OR DenyPolicy(principal_id, context)
+
+
 handler = app.handler
+authorize = app.authorize
