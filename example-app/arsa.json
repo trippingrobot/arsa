@@ -4,7 +4,7 @@
   "authorization": {
     "handler": "users.authorize",
     "type": "lambda",
-    "token_source": "x-api-token",
+    "token_source": "method.request.header.x-arsa-token",
     "token_validation": ".*",
     "ttl": 300
   }
