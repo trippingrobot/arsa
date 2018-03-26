@@ -103,17 +103,32 @@ def test_optional_invalid_route_value(app):
     assert response.status_code == 400
 
 def test_auth(app):
-    res = app.authorize({'type':'TOKEN', 'authorizationToken':'sampletoken', 'methodArn':'arn://'})
+    auth_event = {
+        'type': 'TOKEN',
+        'authorizationToken' : 'test1234',
+        'methodArn': 'arn:aws:execute-api:us-west-2:123456789012:ymy8tbxw7b/v1/GET/{proxy+}'
+    }
+
+    res = app.authorize(auth_event, {})
     assert res['policyDocument']['Statement'][0]['Effect'] == 'Allow'
 
 def test_custom_auth(app):
-    deny = Policy('user', 'arn', allow=False, context={'custom_attr':'string'})
+    auth_event = {
+        'type': 'TOKEN',
+        'authorizationToken' : 'test1234',
+        'methodArn': 'arn:aws:execute-api:us-west-2:123456789012:ymy8tbxw7b/v1/GET/{proxy+}'
+    }
+
+    deny = Policy(auth_event, allow=False, context={'custom_attr':'string'})
+    deny.principal_id = 'user'
     func = MagicMock(testfunc, return_value=deny)
+
     app.authorizer()(func)
-    res = app.authorize({'type':'TOKEN', 'authorizationToken':'sampletoken', 'methodArn':'arn://'})
+    res = app.authorize(auth_event, {})
     assert res['policyDocument']['Statement'][0]['Effect'] == 'Deny'
     assert res['principalId'] == 'user'
     assert res['context']['custom_attr'] == 'string'
+    assert res['policyDocument']['Statement'][0]['Resource'] == 'arn:aws:execute-api:us-west-2:123456789012:ymy8tbxw7b/v1/*/*'
 
 def test_validate_route_with_model(app):
     func = MagicMock(testfunc, side_effect=lambda tester: tester.name)

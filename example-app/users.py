@@ -36,10 +36,18 @@ def create_account(name, owner, **optional_kwargs):
 
 @app.authorizer()
 def custom_auth(auth_event, context):
-    # TODO: Check for authorization
-    principal_id = auth_event['authorizationToken']
-    arn = auth_event['methodArn']
-    return Policy(principal_id, arn, allow=True)
+    # Create base policy from auth event
+    policy = Policy(auth_event)
+
+    # Set permission
+    policy.allow = (policy.token == 'test_token')
+
+    # Pass value to backend
+    policy.principal_id = 'user'
+
+    print(policy.as_dict())
+
+    return policy
 
 
 handler = app.handler
