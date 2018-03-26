@@ -90,7 +90,7 @@ class Arsa(object):
         policy = Policy(auth_event['authorizationToken'], auth_event['methodArn'], allow=True, context=context)
 
         if self.authorizer_func:
-            policy = self.authorizer_func(auth_event)
+            policy = self.authorizer_func(auth_event, context)
 
         return policy.as_dict()
 
