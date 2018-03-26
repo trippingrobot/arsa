@@ -21,10 +21,11 @@ def create_user(name, **optional_kwargs):
     email = optional_kwargs['email'] if 'email' in optional_kwargs else None
     return {'id':'124', 'name':name, 'email':email}
 
-@app.route("/account")
+@app.route("/account", inject_request=True)
 def get_account(_req):
     """ Get account with params """
-    principal_id = _req.environ['aws.context']['authorizer']['principalId']
+    print(_req.environ['aws.requestContext'])
+    principal_id = _req.environ['aws.requestContext'].authorizer.principalId
     return {'id':principal_id, 'name':'Acme Inc.', 'email':'support@acme.io'}
 
 @app.route("/accounts", methods=['POST'])
