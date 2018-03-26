@@ -1,1 +1,1 @@
-git+git://github.com/trippingrobot/arsa-sdk-python@dev
+git+git://github.com/trippingrobot/arsa-sdk-python

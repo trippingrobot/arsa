@@ -58,8 +58,13 @@ def _get_config(path):
 
     required = ['handler', 'name']
 
-    if all(key not in config for key in required):
+    if not all(key in config for key in required):
         raise click.ClickException('Invalid configuration file.')
+
+    if 'authorization' in config:
+        required = ['handler', 'token_source', 'token_validation', 'ttl']
+        if not all(key in config['authorization'] for key in required):
+            raise click.ClickException('Invalid authentication in configuration file.')
 
     return config
 
@@ -111,6 +116,13 @@ class DeployCommand(object):
         # Deploy core lambda handler
         main_handler = self.config['handler']
         self._create_lambda('{}:{}'.format(self.account_id, api_name), main_handler, buf)
+        source_arn = 'arn:aws:execute-api:{region}:{account_id}:{api_id}/{stage}/*/*'.format(
+            region=self.region,
+            account_id=self.account_id,
+            api_id=self.rest_api_id,
+            stage=self.stage
+        )
+        self._add_lambda_permissions('{}:{}'.format(self.account_id, api_name), source_arn)
 
         if 'authorization' in self.config:
             auth_name = '{}-auth'.format(api_name)
@@ -119,6 +131,14 @@ class DeployCommand(object):
 
             click.secho('Setting up auth...', fg='green')
             self._setup_api_auth(auth_name)
+
+            source_arn = 'arn:aws:execute-api:{region}:{account_id}:{api_id}/authorizers/{auth_id}'.format(
+                region=self.region,
+                account_id=self.account_id,
+                api_id=self.rest_api_id,
+                auth_id=self.authorizer_id
+            )
+            self._add_lambda_permissions('{}:{}'.format(self.account_id, auth_name), source_arn)
 
         # Setup API proxy resources
         self._setup_resources()
@@ -218,13 +238,19 @@ class DeployCommand(object):
                     Name=self.stage,
                     FunctionVersion=version_id
                 )
+            else:
+                raise error
 
-                source_arn = 'arn:aws:execute-api:{region}:{account_id}:{api_id}/{stage}/*/*'.format(
-                    region=self.region,
-                    account_id=self.account_id,
-                    api_id=self.rest_api_id,
-                    stage=self.stage
-                )
+    def _add_lambda_permissions(self, function_name, source_arn):
+        click.secho('Setting default permissions...', fg='green')
+        lamba_client = self.session.client('lambda')
+        try:
+            lamba_client.get_policy(
+                FunctionName='{}:{}'.format(function_name, self.stage),
+            )
+        except ClientError as error:
+            if _resource_not_found(error):
+                click.secho('Adding default permissions...', fg='yellow')
                 lamba_client.add_permission(
                     FunctionName='{}:{}'.format(function_name, self.stage),
                     StatementId='arsa-statement-permission-{}'.format(self.stage),
@@ -234,6 +260,7 @@ class DeployCommand(object):
                 )
             else:
                 raise error
+
 
     def _setup_api(self, api_name):
         # Create API Gatway

@@ -5,6 +5,6 @@
     "handler": "users.authorize",
     "token_source": "method.request.header.x-arsa-token",
     "token_validation": ".*",
-    "ttl": 30
+    "ttl": 0
   }
 }
