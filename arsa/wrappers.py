@@ -19,10 +19,11 @@ class AWSEnvironBuilder(EnvironBuilder):
         )
 
 
-        self.requestContext = event.get('requestContext', None)
-
+        self.request_context = event.get('requestContext', None)
+        self.lambda_context = context
 
     def get_environ(self):
         environ = super(AWSEnvironBuilder, self).get_environ()
-        environ['aws.requestContext'] = self.requestContext
+        environ['aws.requestContext'] = self.request_context
+        environ['aws.lambdaContext'] = self.lambda_context
         return environ

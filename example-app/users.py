@@ -24,8 +24,7 @@ def create_user(name, **optional_kwargs):
 @app.route("/account", inject_request=True)
 def get_account(_req):
     """ Get account with params """
-    print(_req.environ['aws.requestContext'])
-    principal_id = _req.environ['aws.requestContext'].authorizer.principalId
+    principal_id = _req.environ['aws.requestContext']['authorizer']['principalId']
     return {'id':principal_id, 'name':'Acme Inc.', 'email':'support@acme.io'}
 
 @app.route("/accounts", methods=['POST'])
