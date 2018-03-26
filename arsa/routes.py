@@ -12,6 +12,7 @@ class Route(Rule):
         super(Route, self).__init__('/_arsa', endpoint=endpoint, **kwargs)
         self._conditions = {}
         self._token_required = False
+        self.inject_request = False
 
     @property
     def token_required(self):
@@ -21,9 +22,9 @@ class Route(Rule):
     def token_required(self, value):
         self._token_required = value
 
-    def set_rule(self, rule, methods=None):
+    def set_rule(self, rule, methods=None, inject_request=False):
         self.rule = rule
-
+        self.inject_request = inject_request
         # Taken from super class init method
         if methods is None:
             self.methods = None

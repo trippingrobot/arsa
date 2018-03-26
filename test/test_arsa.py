@@ -7,7 +7,7 @@ from werkzeug.test import Client
 from werkzeug.wrappers import Response
 from arsa import Arsa
 from arsa.model import Model, Attribute
-
+from arsa.policy import Policy
 
 class SampleModel(Model):
     name = Attribute(str)
@@ -83,7 +83,7 @@ def test_invalid_route_value(app):
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/val', data={'name':'Bob'})
     assert response.status_code == 400
-    
+
 
 def test_optional_route_value(app):
     func = MagicMock(testfunc, return_value='response')
@@ -102,31 +102,33 @@ def test_optional_invalid_route_value(app):
     response = client.get('/val', data=json.dumps({'name':123}))
     assert response.status_code == 400
 
-def test_get_route_with_auth(app):
-    func = MagicMock(testfunc, return_value='response')
-    app.route('/foobar')(app.token_required()(func))
+def test_auth(app):
+    auth_event = {
+        'type': 'TOKEN',
+        'authorizationToken' : 'test1234',
+        'methodArn': 'arn:aws:execute-api:us-west-2:123456789012:ymy8tbxw7b/v1/GET/{proxy+}'
+    }
 
-    client = Client(app.create_app(), response_wrapper=Response)
-    response = client.get('/foobar', headers={"x-api-token":"1234"})
-    assert response.status_code == 200
-    assert response.data == b'"response"'
+    res = app.authorize(auth_event, {})
+    assert res['policyDocument']['Statement'][0]['Effect'] == 'Allow'
 
-def test_get_route_without_auth(app):
-    func = MagicMock(testfunc, return_value='response')
-    app.route('/foobar')(app.token_required()(func))
+def test_custom_auth(app):
+    auth_event = {
+        'type': 'TOKEN',
+        'authorizationToken' : 'test1234',
+        'methodArn': 'arn:aws:execute-api:us-west-2:123456789012:ymy8tbxw7b/v1/GET/{proxy+}'
+    }
 
-    client = Client(app.create_app(), response_wrapper=Response)
-    response = client.get('/foobar')
-    assert response.status_code == 401
+    deny = Policy(auth_event, allow=False, context={'custom_attr':'string'})
+    deny.principal_id = 'user'
+    func = MagicMock(testfunc, return_value=deny)
 
-def test_token_bypass(app):
-    func = MagicMock(testfunc, return_value='response')
-    app.route('/foobar')(app.token_required()(func))
-
-    client = Client(app.create_app(check_token=False), response_wrapper=Response)
-    response = client.get('/foobar')
-    assert response.status_code == 200
-    assert response.data == b'"response"'
+    app.authorizer()(func)
+    res = app.authorize(auth_event, {})
+    assert res['policyDocument']['Statement'][0]['Effect'] == 'Deny'
+    assert res['principalId'] == 'user'
+    assert res['context']['custom_attr'] == 'string'
+    assert res['policyDocument']['Statement'][0]['Resource'] == 'arn:aws:execute-api:us-west-2:123456789012:ymy8tbxw7b/v1/*/*'
 
 def test_validate_route_with_model(app):
     func = MagicMock(testfunc, side_effect=lambda tester: tester.name)
@@ -165,10 +167,10 @@ def test_error_handler(app):
     assert response['statusCode'] == 400
 
 def test_get_route_with_query_params(app):
-    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['query']['happy'])
-    app.route('/foobar')(func)
+    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['_req'].args['happy'])
+    app.route('/foobar', inject_request=True)(func)
 
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/foobar?bob=star&happy=lucky')
     assert response.status_code == 200
-    assert response.data == b'["lucky"]'
+    assert response.data == b'"lucky"'
