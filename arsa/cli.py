@@ -89,8 +89,8 @@ class DeployCommand(object):
         if self.session.get_credentials() is None:
             raise click.ClickException('No Arsa or AWS credentials were found.')
 
+        # Infrastructure Id's
         self.account_id = self.session.client('sts').get_caller_identity().get('Account')
-
         self.rest_api_id = None
         self.role_arn = None
         self.authorizer_id = None
@@ -115,7 +115,7 @@ class DeployCommand(object):
         if 'authorization' in self.config:
             auth_name = '{}-auth'.format(api_name)
             auth_handler = self.config['authorization']['handler']
-            self._create_lambda('{}:{}-auth'.format(self.account_id, auth_name), auth_handler, buf)
+            self._create_lambda('{}:{}'.format(self.account_id, auth_name), auth_handler, buf)
 
             click.secho('Setting up auth...', fg='green')
             self._setup_api_auth(auth_name)
@@ -323,7 +323,7 @@ class DeployCommand(object):
             resource_id = resp['id']
 
             # Setup ANY method
-            if self.authorizer_id:
+            if not self.authorizer_id:
                 api_client.put_method(
                     restApiId=self.rest_api_id,
                     resourceId=resource_id,
