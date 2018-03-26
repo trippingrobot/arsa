@@ -39,7 +39,7 @@ def custom_auth(auth_event, context):
     # TODO: Check for authorization
     principal_id = auth_event['authorizationToken']
     arn = auth_event['methodArn']
-    return Policy(principal_id, arn, allow=True, context=context)
+    return Policy(principal_id, arn, allow=True)
 
 
 handler = app.handler
