@@ -86,8 +86,8 @@ class Arsa(object):
             "body": response.get_data(as_text=True)
         }
 
-    def authorize(self, auth_event):
-        policy = Policy(auth_event['authorizationToken'], auth_event['methodArn'], allow=True)
+    def authorize(self, auth_event, context):
+        policy = Policy(auth_event['authorizationToken'], auth_event['methodArn'], allow=True, context=context)
 
         if self.authorizer_func:
             policy = self.authorizer_func(auth_event)

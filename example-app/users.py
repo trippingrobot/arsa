@@ -34,12 +34,12 @@ def create_account(name, owner, **optional_kwargs):
     return {'id':'124', 'name':name, 'owner': owner, 'partner': optional_kwargs.get('partner', None)}
 
 
-@app.authorizer
-def custom_auth(auth_event):
+@app.authorizer()
+def custom_auth(auth_event, context):
     # TODO: Check for authorization
     principal_id = auth_event['authorizationToken']
     arn = auth_event['methodArn']
-    return Policy(principal_id, arn, allow=True) # OR DenyPolicy(principal_id, context)
+    return Policy(principal_id, arn, allow=True, context=context)
 
 
 handler = app.handler
