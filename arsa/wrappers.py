@@ -1,5 +1,4 @@
 from werkzeug.test import EnvironBuilder
-from werkzeug.wrappers import Request
 
 class AWSEnvironBuilder(EnvironBuilder):
 
@@ -20,3 +19,9 @@ class AWSEnvironBuilder(EnvironBuilder):
         )
 
         self.context = context
+
+
+    def get_environ(self):
+        environ = super(AWSEnvironBuilder, self).get_environ()
+        environ['aws.context'] = self.context
+        return environ
