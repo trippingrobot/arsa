@@ -17,14 +17,15 @@ def list_users():
 @app.required(name=str)
 @app.optional(email=str)
 def create_user(name, **optional_kwargs):
-    """ Create user if client is authenticated """
+    """ Create user """
     email = optional_kwargs['email'] if 'email' in optional_kwargs else None
     return {'id':'124', 'name':name, 'email':email}
 
-@app.route("/accounts/<account_id>")
-def get_account(account_id):
+@app.route("/account")
+def get_account(_req):
     """ Get account with params """
-    return [{'id':account_id, 'name':'Acme Inc.', 'email':'support@acme.io'}]
+    principal_id = _req.environ.context['authorizer']['principalId']
+    return {'id':principal_id, 'name':'Acme Inc.', 'email':'support@acme.io'}
 
 @app.route("/accounts", methods=['POST'])
 @app.required(name=str, owner=Person)
@@ -44,8 +45,6 @@ def custom_auth(auth_event, context):
 
     # Pass value to backend
     policy.principal_id = 'user'
-
-    print(policy.as_dict())
 
     return policy
 

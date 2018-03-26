@@ -3,9 +3,8 @@
   "handler": "users.handler",
   "authorization": {
     "handler": "users.authorize",
-    "type": "lambda",
     "token_source": "method.request.header.x-arsa-token",
     "token_validation": ".*",
-    "ttl": 300
+    "ttl": 30
   }
 }

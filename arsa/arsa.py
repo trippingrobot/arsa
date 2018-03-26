@@ -2,12 +2,13 @@
 import json
 from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
-from werkzeug.exceptions import HTTPException, Unauthorized, BadRequest
-from werkzeug.test import EnvironBuilder, run_wsgi_app
+from werkzeug.exceptions import HTTPException, BadRequest
+from werkzeug.test import run_wsgi_app
 
 from .routes import RouteFactory
 from .util import to_serializable
 from .policy import Policy
+from .wrappers import AWSEnvironBuilder
 
 class Arsa(object):
     """
@@ -21,14 +22,14 @@ class Arsa(object):
 
         self.authorizer_func = None
 
-    def route(self, rule, methods=None):
+    def route(self, rule, methods=None, inject_request=False):
         """ Convenience decorator for defining a route """
         if methods is None:
             methods = ['GET']
 
         def decorator(func):
             route = self.factory.register_endpoint(func)
-            route.set_rule(rule, methods)
+            route.set_rule(rule, methods, inject_request=inject_request)
             return func
 
         return decorator
@@ -59,22 +60,9 @@ class Arsa(object):
         return decorator
 
     def handler(self, event, context):
-        app = self.create_app(check_token=False)
+        app = self.create_app()
 
-        query_string = None
-        if 'queryStringParameters' in event:
-            if isinstance(event['queryStringParameters'], dict):
-                query_string = '?'.join(
-                    ['{}={}'.format(k, v) for k, v in event['queryStringParameters'].items()]
-                )
-
-        builder = EnvironBuilder(
-            path=event['path'],
-            method=event['httpMethod'],
-            headers=event['headers'],
-            data=event['body'],
-            query_string=query_string
-        )
+        builder = AWSEnvironBuilder(event, context)
         builder.close()
         resp = run_wsgi_app(app, builder.get_environ())
 
@@ -94,7 +82,7 @@ class Arsa(object):
 
         return policy.as_dict()
 
-    def create_app(self, check_token=True):
+    def create_app(self):
 
         if not self.routes:
             self.routes = Map(rules=[self.factory]).bind('arsa.io')
@@ -106,9 +94,6 @@ class Arsa(object):
                 # Find url rule
                 (rule, arguments) = self.routes.match(req.path, method=req.method, return_rule=True)
 
-                if check_token and rule.token_required and 'x-api-token' not in req.headers:
-                    raise Unauthorized("Not token sent.")
-
                 if req.data:
                     try:
                         data = json.loads(req.data)
@@ -116,11 +101,11 @@ class Arsa(object):
                     except ValueError:
                         raise BadRequest("JSON body was malformed")
 
-                if req.args:
-                    arguments.update({'query': dict(req.args)})
-
                 rule.has_valid_arguments(arguments)
                 decoded_args = rule.decode_arguments(arguments)
+
+                if rule.inject_request:
+                    decoded_args['_req'] = req
 
                 body = rule.endpoint(**decoded_args)
 
