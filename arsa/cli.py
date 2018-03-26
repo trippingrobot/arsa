@@ -460,10 +460,12 @@ def run_command(host, port, path, reload):
     """Run a local development server."""
 
     from werkzeug.serving import run_simple
+    from .wrappers import TestRequestHandler
 
     config = _get_config(path)
     app = _load_app(config['handler'], relpath=path)
-    run_simple(host, port, app, use_reloader=reload)
+
+    run_simple(host, port, app, use_reloader=reload, request_handler=TestRequestHandler)
 
 @arsa.command('deploy', short_help='Deploy your API.')
 @click.option('--stage', '-s', default='v1',

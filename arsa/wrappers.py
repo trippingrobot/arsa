@@ -1,4 +1,5 @@
 from werkzeug.test import EnvironBuilder
+from werkzeug.serving import WSGIRequestHandler
 
 class AWSEnvironBuilder(EnvironBuilder):
 
@@ -26,4 +27,15 @@ class AWSEnvironBuilder(EnvironBuilder):
         environ = super(AWSEnvironBuilder, self).get_environ()
         environ['aws.requestContext'] = self.request_context
         environ['aws.lambdaContext'] = self.lambda_context
+        return environ
+
+class TestRequestHandler(WSGIRequestHandler):
+
+    def make_environ(self):
+        environ = super(TestRequestHandler, self).make_environ()
+        environ['aws.requestContext'] = {
+            'authorizer': {
+                'principalId': '1234'
+            }
+        }
         return environ
