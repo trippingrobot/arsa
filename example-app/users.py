@@ -22,9 +22,9 @@ def create_user(name, **optional_kwargs):
     return {'id':'124', 'name':name, 'email':email}
 
 @app.route("/account", inject_request=True)
-def get_account(_req):
+def get_account(arsa_request):
     """ Get account with params """
-    principal_id = _req.environ['aws.requestContext']['authorizer']['principalId']
+    principal_id = arsa_request.environ['aws.requestContext']['authorizer']['principalId']
     return {'id':principal_id, 'name':'Acme Inc.', 'email':'support@acme.io'}
 
 @app.route("/accounts", methods=['POST'])

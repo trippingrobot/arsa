@@ -105,7 +105,7 @@ class Arsa(object):
                 decoded_args = rule.decode_arguments(arguments)
 
                 if rule.inject_request:
-                    decoded_args['_req'] = req
+                    decoded_args['arsa_request'] = req
 
                 body = rule.endpoint(**decoded_args)
 
