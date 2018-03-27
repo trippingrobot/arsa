@@ -167,10 +167,16 @@ def test_error_handler(app):
     assert response['statusCode'] == 400
 
 def test_get_route_with_query_params(app):
-    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['_req'].args['happy'])
+    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['arsa_request'].args['happy'])
     app.route('/foobar', inject_request=True)(func)
 
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/foobar?bob=star&happy=lucky')
     assert response.status_code == 200
     assert response.data == b'"lucky"'
+
+def test_pass_through_context(app):
+    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['_req'].args['happy'])
+    app.route('/foobar', inject_request=True)(func)
+
+    client = Client(app.create_app(), response_wrapper=Response)

@@ -1,0 +1,16 @@
+{
+  "status_code": 200,
+  "data": {
+    "Buckets": [
+      {
+        "Name": "test_bucket",
+        "CreationDate": "2017-01-01 00:00:00+00:00"
+      }
+    ],
+    "Owner": {
+      "DisplayName": "somebody",
+      "ID": "c7bc5acd095a702f7f9782caf4ea722bfa3d393477cdb85b78c65a09b8a690f8"
+    }
+  }
+}
+

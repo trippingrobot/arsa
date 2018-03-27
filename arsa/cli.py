@@ -33,7 +33,6 @@ def _find_app(module):
     except StopIteration as error:
         raise click.ClickException(error)
 
-
 def _load_app(python_path, relpath=None):
     module = '.'.join(python_path.split('.')[:-1])
     func = python_path.split('.')[-1:]
@@ -48,6 +47,17 @@ def _load_app(python_path, relpath=None):
     app = _find_app(module_code)
 
     return app.create_app()
+
+def _load_custom_handler(python_path, relpath=None):
+    module = '.'.join(python_path.split('.')[:-1])
+    klass = python_path.split('.')[-1:]
+
+    if relpath and sys.path[0] != relpath:
+        sys.path.insert(0, relpath)
+
+    # Load the handler
+    mod = __import__(module, globals(), locals(), klass, 0)
+    return getattr(mod, klass[0])
 
 def _get_config(path):
     full_path = os.path.join(path, 'arsa.json')
@@ -454,18 +464,20 @@ def run_config(path):
 @click.option('--port', '-p', default=5000,
               help='The port to bind to.')
 @click.option('--path', default=os.curdir, help='Path to an arsa app if not in root directory.')
-@click.option('--reload/--no-reload', default=None,
-              help='Enable or disable the reloader.')
-def run_command(host, port, path, reload):
+@click.option('--handler', '-h', default=None,
+              help='Python path to custom request handler.')
+def run_command(host, port, path, handler):
     """Run a local development server."""
 
     from werkzeug.serving import run_simple
-    from .wrappers import TestRequestHandler
+
+    if handler:
+        handler = _load_custom_handler(handler, relpath=path)
 
     config = _get_config(path)
     app = _load_app(config['handler'], relpath=path)
 
-    run_simple(host, port, app, use_reloader=reload, request_handler=TestRequestHandler)
+    run_simple(host, port, app, request_handler=handler)
 
 @arsa.command('deploy', short_help='Deploy your API.')
 @click.option('--stage', '-s', default='v1',

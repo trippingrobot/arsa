@@ -1,0 +1,4 @@
+{
+  "name": "boto-app",
+  "handler": "app.handler"
+}
