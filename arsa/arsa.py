@@ -22,14 +22,14 @@ class Arsa(object):
 
         self.authorizer_func = None
 
-    def route(self, rule, methods=None, inject_request=False):
+    def route(self, rule, methods=None, content_type='application/json', inject_request=False):
         """ Convenience decorator for defining a route """
         if methods is None:
             methods = ['GET']
 
         def decorator(func):
             route = self.factory.register_endpoint(func)
-            route.set_rule(rule, methods, inject_request=inject_request)
+            route.set_rule(rule, methods, mimetype=content_type, inject_request=inject_request)
             return func
 
         return decorator
@@ -110,7 +110,7 @@ class Arsa(object):
                 body = rule.endpoint(**decoded_args)
 
                 response = Response(
-                    json.dumps(body, default=to_serializable), mimetype='application/json'
+                    json.dumps(body, default=to_serializable), mimetype=rule.mimetype
                 )
                 return response(environ, start_response)
             except HTTPException as error:

@@ -180,3 +180,13 @@ def test_pass_through_context(app):
     app.route('/foobar', inject_request=True)(func)
 
     client = Client(app.create_app(), response_wrapper=Response)
+
+def test_html_mime_type(app):
+    func = MagicMock(testfunc, return_value='<html><body><p>HI</p></body></html>')
+    app.route('/coolwebsite', content_type='application/html')(func)
+
+    client = Client(app.create_app(), response_wrapper=Response)
+    response = client.get('/coolwebsite')
+    assert response.status_code == 200
+    assert response.headers['Content-Type'] == 'application/html'
+    assert response.data == b'"<html><body><p>HI</p></body></html>"'

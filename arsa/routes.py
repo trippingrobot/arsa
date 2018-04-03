@@ -13,6 +13,7 @@ class Route(Rule):
         self._conditions = {}
         self._token_required = False
         self.inject_request = False
+        self.mimetype = None
 
     @property
     def token_required(self):
@@ -22,8 +23,9 @@ class Route(Rule):
     def token_required(self, value):
         self._token_required = value
 
-    def set_rule(self, rule, methods=None, inject_request=False):
+    def set_rule(self, rule, methods=None, mimetype=None, inject_request=False):
         self.rule = rule
+        self.mimetype = mimetype
         self.inject_request = inject_request
         # Taken from super class init method
         if methods is None:
