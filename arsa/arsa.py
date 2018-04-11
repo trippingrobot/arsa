@@ -4,11 +4,14 @@ from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import HTTPException, BadRequest
 from werkzeug.test import run_wsgi_app
+from werkzeug.utils import redirect
 
 from .routes import RouteFactory
 from .util import to_serializable
 from .policy import Policy
 from .wrappers import AWSEnvironBuilder
+from .exceptions import Redirect
+
 
 class Arsa(object):
     """
@@ -71,6 +74,7 @@ class Arsa(object):
 
         return {
             "statusCode": response.status_code,
+            "headers": dict(response.headers),
             "body": response.get_data(as_text=True)
         }
 
@@ -113,11 +117,13 @@ class Arsa(object):
                     json.dumps(body, default=to_serializable), mimetype=rule.mimetype
                 )
                 return response(environ, start_response)
+            except Redirect as error:
+                resp = redirect(error.location)
+                return resp(environ, start_response)
             except HTTPException as error:
                 resp = Response(
                     json.dumps(error, default=to_serializable),
-                    error.code,
-                    error.get_headers(environ)
+                    error.code
                 )
                 return resp(environ, start_response)
 

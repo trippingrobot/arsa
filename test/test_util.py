@@ -3,6 +3,7 @@ import json
 
 from arsa.util import to_serializable
 from arsa.model import Model, Attribute
+from arsa.exceptions import Redirect
 
 class SampleModel(Model):
     name = Attribute(str)
@@ -20,3 +21,8 @@ def test_serialize_complex():
     model = ComplexTestModel(test={'name':'Foo', 'phone':'1234567890'})
     raw = json.dumps(model, default=to_serializable)
     assert raw == '{"test": {"name": "Foo", "phone": "1234567890"}}'
+
+def test_serialize_redirect():
+    model = Redirect('http://example.com')
+    raw = json.dumps(model, default=to_serializable)
+    assert raw == '{"error": "http://example.com"}'

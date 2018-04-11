@@ -1,6 +1,7 @@
 from functools import singledispatch
 from werkzeug.exceptions import HTTPException
 from .model import Model
+from .exceptions import Redirect
 
 @singledispatch
 def to_serializable(val):
@@ -18,4 +19,11 @@ def ts_model(val):
     return {
         "error": val.name,
         "description": val.description
+    }
+
+@to_serializable.register(Redirect)
+def ts_model(val):
+    """Used if *val* is an instance of our HTTPException class."""
+    return {
+        "error": val.location
     }

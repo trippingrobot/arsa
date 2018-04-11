@@ -389,6 +389,7 @@ class DeployCommand(object):
                     stage_variable=stage_variable)
             )
 
+
     def _setup_api_auth(self, name):
         api_client = self.session.client('apigateway')
         try:

@@ -1,6 +1,7 @@
 from arsa import Arsa
 from arsa.model import Model, Attribute
 from arsa.policy import Policy
+from arsa.exceptions import Redirect
 
 class Person(Model):
     name = Attribute(str)
@@ -34,6 +35,10 @@ def create_account(name, owner, **optional_kwargs):
     """ Create account and make sure 'name' parameter is passed as a string """
     return {'id':'124', 'name':name, 'owner': owner, 'partner': optional_kwargs.get('partner', None)}
 
+@app.route("/redirect")
+def redirect():
+    """ Redirect to another endpoint """
+    raise Redirect('https://httpbin.org/get')
 
 @app.authorizer()
 def custom_auth(auth_event, context):

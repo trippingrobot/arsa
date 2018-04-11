@@ -1,13 +1,14 @@
 import pytest
 import json
 import os
-import base64
+
 from unittest.mock import MagicMock
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
 from arsa import Arsa
 from arsa.model import Model, Attribute
 from arsa.policy import Policy
+from arsa.exceptions import Redirect
 
 class SampleModel(Model):
     name = Attribute(str)
@@ -165,6 +166,21 @@ def test_error_handler(app):
     response = app.handler(event, {})
 
     assert response['statusCode'] == 400
+
+def test_redirect_handler(app):
+
+    def throw(**args):
+        raise Redirect('http://example.com')
+
+    app.route('/users')(throw)
+    event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/get_proxy.json')))
+
+    response = app.handler(event, {})
+
+    print(response)
+
+    assert response['statusCode'] == 302
+    assert response['headers']['Location'] == 'http://example.com'
 
 def test_get_route_with_query_params(app):
     func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['arsa_request'].args['happy'])
