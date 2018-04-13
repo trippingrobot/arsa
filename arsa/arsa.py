@@ -24,6 +24,7 @@ class Arsa(object):
     def __init__(self):
         self.factory = RouteFactory()
         self.routes = None
+        self.middlewares = []
 
         self.authorizer_func = None
 
@@ -88,6 +89,10 @@ class Arsa(object):
 
         return policy.as_dict()
 
+    def add_middleware(self, middleware):
+        if callable(middleware):
+            self.middlewares.append(middleware)
+
     def create_app(self):
 
         if not self.routes:
@@ -95,10 +100,14 @@ class Arsa(object):
 
         def app(environ, start_response):
             req = Request(environ)
-
             _request_ctx_stack.push(RequestContext(req))
 
             try:
+
+                # Call middlewares
+                for middleware in self.middlewares:
+                    middleware()
+
                 # Find url rule
                 (rule, arguments) = self.routes.match(req.path, method=req.method, return_rule=True)
 

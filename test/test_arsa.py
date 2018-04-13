@@ -216,6 +216,19 @@ def test_global_map_context(app):
     response = client.get('/foobar')
     assert response.data == b'"userface"'
 
+def test_middleware(app):
+    def middleware():
+        g.user = 'userface'
+
+    app.add_middleware(middleware)
+
+    func = MagicMock(testfunc, side_effect=lambda: g.user)
+    app.route('/foobar')(func)
+
+    client = Client(app.create_app(), response_wrapper=Response)
+    response = client.get('/foobar')
+    assert response.data == b'"userface"'
+
 def test_html_mime_type(app):
     func = MagicMock(testfunc, return_value='<html><body><p>HI</p></body></html>')
     app.route('/coolwebsite', content_type='application/html')(func)
