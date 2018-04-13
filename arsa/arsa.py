@@ -6,12 +6,14 @@ from werkzeug.exceptions import HTTPException, BadRequest
 from werkzeug.test import run_wsgi_app
 from werkzeug.utils import redirect
 
+
 from .routes import RouteFactory
 from .util import to_serializable
 from .policy import Policy
 from .wrappers import AWSEnvironBuilder
 from .exceptions import Redirect
-
+from .globals import _request_ctx_stack
+from .ctx import RequestContext
 
 class Arsa(object):
     """
@@ -25,14 +27,14 @@ class Arsa(object):
 
         self.authorizer_func = None
 
-    def route(self, rule, methods=None, content_type='application/json', inject_request=False):
+    def route(self, rule, methods=None, content_type='application/json'):
         """ Convenience decorator for defining a route """
         if methods is None:
             methods = ['GET']
 
         def decorator(func):
             route = self.factory.register_endpoint(func)
-            route.set_rule(rule, methods, mimetype=content_type, inject_request=inject_request)
+            route.set_rule(rule, methods, mimetype=content_type)
             return func
 
         return decorator
@@ -92,9 +94,11 @@ class Arsa(object):
             self.routes = Map(rules=[self.factory]).bind('arsa.io')
 
         def app(environ, start_response):
-            try:
-                req = Request(environ)
+            req = Request(environ)
 
+            _request_ctx_stack.push(RequestContext(req))
+
+            try:
                 # Find url rule
                 (rule, arguments) = self.routes.match(req.path, method=req.method, return_rule=True)
 
@@ -108,23 +112,21 @@ class Arsa(object):
                 rule.has_valid_arguments(arguments)
                 decoded_args = rule.decode_arguments(arguments)
 
-                if rule.inject_request:
-                    decoded_args['arsa_request'] = req
-
                 body = rule.endpoint(**decoded_args)
 
-                response = Response(
+                resp = Response(
                     json.dumps(body, default=to_serializable), mimetype=rule.mimetype
                 )
-                return response(environ, start_response)
             except Redirect as error:
                 resp = redirect(error.location)
-                return resp(environ, start_response)
             except HTTPException as error:
                 resp = Response(
                     json.dumps(error, default=to_serializable),
                     error.code
                 )
-                return resp(environ, start_response)
+
+            _request_ctx_stack.pop()
+
+            return resp(environ, start_response)
 
         return app

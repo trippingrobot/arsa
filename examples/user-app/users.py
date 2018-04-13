@@ -2,6 +2,7 @@ from arsa import Arsa
 from arsa.model import Model, Attribute
 from arsa.policy import Policy
 from arsa.exceptions import Redirect
+from arsa.globals import request
 
 class Person(Model):
     name = Attribute(str)
@@ -22,10 +23,10 @@ def create_user(name, **optional_kwargs):
     email = optional_kwargs['email'] if 'email' in optional_kwargs else None
     return {'id':'124', 'name':name, 'email':email}
 
-@app.route("/account", inject_request=True)
-def get_account(arsa_request):
+@app.route("/account")
+def get_account():
     """ Get account with params """
-    principal_id = arsa_request.environ['aws.requestContext']['authorizer']['principalId']
+    principal_id = request.environ['aws.requestContext']['authorizer']['principalId']
     return {'id':principal_id, 'name':'Acme Inc.', 'email':'support@acme.io'}
 
 @app.route("/accounts", methods=['POST'])

@@ -9,6 +9,7 @@ from arsa import Arsa
 from arsa.model import Model, Attribute
 from arsa.policy import Policy
 from arsa.exceptions import Redirect
+from arsa.globals import request, g
 
 class SampleModel(Model):
     name = Attribute(str)
@@ -183,19 +184,37 @@ def test_redirect_handler(app):
     assert response['headers']['Location'] == 'http://example.com'
 
 def test_get_route_with_query_params(app):
-    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['arsa_request'].args['happy'])
-    app.route('/foobar', inject_request=True)(func)
+    func = MagicMock(testfunc, side_effect=lambda: request.args['happy'])
+    app.route('/foobar')(func)
 
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/foobar?bob=star&happy=lucky')
     assert response.status_code == 200
     assert response.data == b'"lucky"'
 
-def test_pass_through_context(app):
-    func = MagicMock(testfunc, side_effect=lambda **kwargs: kwargs['_req'].args['happy'])
-    app.route('/foobar', inject_request=True)(func)
+def test_global_request_context(app):
+    func = MagicMock(testfunc, side_effect=lambda: request.headers['Host'])
+    app.route('/foobar')(func)
 
     client = Client(app.create_app(), response_wrapper=Response)
+    response = client.get('/foobar')
+    assert response.data == b'"localhost"'
+
+def test_global_map_context(app):
+
+    def func1():
+        g.user = 'userface'
+        return func2()
+
+    def func2():
+        return g.user
+
+    func = MagicMock(testfunc, side_effect=func1)
+    app.route('/foobar')(func)
+
+    client = Client(app.create_app(), response_wrapper=Response)
+    response = client.get('/foobar')
+    assert response.data == b'"userface"'
 
 def test_html_mime_type(app):
     func = MagicMock(testfunc, return_value='<html><body><p>HI</p></body></html>')
