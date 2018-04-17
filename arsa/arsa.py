@@ -112,7 +112,6 @@ class Arsa(object):
                 (rule, arguments) = self.routes.match(req.path, method=req.method, return_rule=True)
 
                 arguments.update({k:v if len(v) > 1 else v[0] for k, v in dict(req.args).items()})
-                print(arguments)
 
                 if req.data:
                     try:
