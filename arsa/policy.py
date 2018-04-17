@@ -2,7 +2,7 @@ class Policy(object):
 
     def __init__(self, event, allow=True, context=None):
         self.token = event['authorizationToken']
-        self.arn = Policy.__get_resource_arn(event['methodArn'])
+        self.arn = Policy.get_resource_arn(event['methodArn'])
 
         # Set default principal_id to token
         self.principal_id = self.token
@@ -10,7 +10,7 @@ class Policy(object):
         self.context = context
 
     @staticmethod
-    def __get_resource_arn(arn):
+    def get_resource_arn(arn):
         second_idx = arn.rfind('/', 0, arn.rfind('/'))
         return arn[:second_idx] + '/*/*'
 
@@ -23,7 +23,7 @@ class Policy(object):
                     {
                         "Action": "execute-api:Invoke",
                         "Effect": ('Allow' if self.allow else 'Deny'),
-                        "Resource": self.arn
+                        "Resource": '*' # TODO: Need to fix
                     }
                 ]},
             'context': self.context

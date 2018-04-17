@@ -130,7 +130,7 @@ def test_custom_auth(app):
     assert res['policyDocument']['Statement'][0]['Effect'] == 'Deny'
     assert res['principalId'] == 'user'
     assert res['context']['custom_attr'] == 'string'
-    assert res['policyDocument']['Statement'][0]['Resource'] == 'arn:aws:execute-api:us-west-2:123456789012:ymy8tbxw7b/v1/*/*'
+    assert res['policyDocument']['Statement'][0]['Resource'] == '*'
 
 def test_validate_route_with_model(app):
     func = MagicMock(testfunc, side_effect=lambda tester: tester.name)
