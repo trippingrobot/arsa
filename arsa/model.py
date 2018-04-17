@@ -92,7 +92,10 @@ def valid_arguments(name, arguments, attributes):
             for index, item in enumerate(argument):
                 valid_argument('{}.{}'.format(name, index), item, Attribute(attribute.typeof))
         elif not isinstance(argument, attribute.attr_type):
-            raise ArgumentKeyError("argument {} was not of the type {}".format(name, attribute.attr_type))
+            if isinstance(argument, list) and len(argument) == 1:
+                pass
+            else:
+                raise ArgumentKeyError("argument {} was not of the type {}".format(name, attribute.attr_type))
         return True
 
     for key, attr in attributes.items():

@@ -47,6 +47,9 @@ class Route(Rule):
                 attr = self._conditions[key]
                 if issubclass(attr.attr_type, Model):
                     arguments[key] = attr.attr_type(**value)
+                elif not isinstance(attr, ListType) and isinstance(value, list) and len(value) == 1:
+                    arguments[key] = value[0]
+
         return arguments
 
 class RouteFactory(RuleFactory):

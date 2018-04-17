@@ -193,7 +193,7 @@ def test_get_route_with_query_params(app):
     assert response.data == b'"lucky"'
 
 def test_get_route_with_req_query_params(app):
-    func = MagicMock(testfunc, return_value='burger')
+    func = MagicMock(testfunc, side_effect=lambda val: val)
     app.route('/foobar')(app.required(val=str)(func))
 
     client = Client(app.create_app(), response_wrapper=Response)

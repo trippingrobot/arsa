@@ -111,7 +111,7 @@ class Arsa(object):
                 # Find url rule
                 (rule, arguments) = self.routes.match(req.path, method=req.method, return_rule=True)
 
-                arguments.update({k:v if len(v) > 1 else v[0] for k, v in dict(req.args).items()})
+                arguments.update(dict(req.args))
 
                 if req.data:
                     try:
