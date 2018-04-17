@@ -43,7 +43,7 @@ def test_list_attribute():
 
     valid_arguments(__name__, arguments, conditions)
 
-def test__invalid_list_attribute():
+def test_invalid_list_attribute():
     conditions = {
         'foobars': Attribute(FooBarsModel)
     }

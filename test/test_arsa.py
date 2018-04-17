@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
 from arsa import Arsa
-from arsa.model import Model, Attribute
+from arsa.model import Model, Attribute, ListType
 from arsa.policy import Policy
 from arsa.exceptions import Redirect
 from arsa.globals import request, g
@@ -184,13 +184,33 @@ def test_redirect_handler(app):
     assert response['headers']['Location'] == 'http://example.com'
 
 def test_get_route_with_query_params(app):
-    func = MagicMock(testfunc, side_effect=lambda: request.args['happy'])
+    func = MagicMock(testfunc, side_effect=lambda **kwargs: request.args['happy'])
     app.route('/foobar')(func)
 
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/foobar?bob=star&happy=lucky')
     assert response.status_code == 200
     assert response.data == b'"lucky"'
+
+def test_get_route_with_req_query_params(app):
+    func = MagicMock(testfunc, return_value='burger')
+    app.route('/foobar')(app.required(val=str)(func))
+
+    client = Client(app.create_app(), response_wrapper=Response)
+    response = client.get('/foobar?val=burger')
+    print(response.data)
+    assert response.status_code == 200
+    assert response.data == b'"burger"'
+
+def test_get_route_with_multi_query_params(app):
+    func = MagicMock(testfunc, return_value=['dog', 'cat'])
+    app.route('/foobar')(app.required(animal=ListType)(func))
+
+    client = Client(app.create_app(), response_wrapper=Response)
+    response = client.get('/foobar?animal=dog&animal=cat')
+    print(response.data)
+    assert response.status_code == 200
+    assert response.data == b'["dog", "cat"]'
 
 def test_global_request_context(app):
     func = MagicMock(testfunc, side_effect=lambda: request.headers['Host'])

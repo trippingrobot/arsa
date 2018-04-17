@@ -4,6 +4,9 @@ from inspect import getmembers
 
 from .exceptions import ArgumentKeyError
 
+class ListType(list):
+    _type = object
+
 class Attribute(object):
 
     def __init__(self, attr_type, optional=False, attr_name=None):

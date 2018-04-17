@@ -3,7 +3,7 @@ from werkzeug.routing import (Rule, RuleFactory)
 from werkzeug.exceptions import BadRequest
 
 
-from .model import valid_arguments, Attribute, Model
+from .model import valid_arguments, Attribute, Model, ListType, ListAttribute
 from .exceptions import ArgumentKeyError
 
 class Route(Rule):
@@ -28,7 +28,9 @@ class Route(Rule):
         if 'query' in conditions:
             raise ValueError('The query named parameter is reserved.')
 
-        conditions = {k: Attribute(v, optional=optional) for k, v in conditions.items()}
+        conditions = {k: ListAttribute(typeof=v._type, optional=optional)
+                         if issubclass(v, ListType) else Attribute(v, optional=optional)
+                      for k, v in conditions.items()}
         self._conditions.update(conditions)
 
     def has_valid_arguments(self, arguments):
