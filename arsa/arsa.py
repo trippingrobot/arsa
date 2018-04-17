@@ -125,9 +125,10 @@ class Arsa(object):
 
                 body = rule.endpoint(**decoded_args)
 
-                resp = Response(
-                    json.dumps(body, default=to_serializable), mimetype=rule.mimetype
-                )
+                if rule.mimetype == 'application/json':
+                    body = json.dumps(body, default=to_serializable)
+
+                resp = Response(body, mimetype=rule.mimetype)
             except Redirect as error:
                 resp = redirect(error.location)
             except HTTPException as error:

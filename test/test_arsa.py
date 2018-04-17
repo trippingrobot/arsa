@@ -257,4 +257,4 @@ def test_html_mime_type(app):
     response = client.get('/coolwebsite')
     assert response.status_code == 200
     assert response.headers['Content-Type'] == 'application/html'
-    assert response.data == b'"<html><body><p>HI</p></body></html>"'
+    assert response.data == b'<html><body><p>HI</p></body></html>'
