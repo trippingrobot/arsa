@@ -1,4 +1,5 @@
 {
   "name": "boto-app",
-  "handler": "app.handler"
+  "handler": "app.handler",
+  "stage": "v1"
 }

@@ -1,6 +1,7 @@
 {
   "name": "example-app",
   "handler": "users.handler",
+  "stage": "v1",
   "authorization": {
     "handler": "users.authorize",
     "token_source": "method.request.header.x-arsa-token",

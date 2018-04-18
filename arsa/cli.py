@@ -59,14 +59,13 @@ def _load_custom_handler(python_path, relpath=None):
     mod = __import__(module, globals(), locals(), klass, 0)
     return getattr(mod, klass[0])
 
-def _get_config(path):
-    full_path = os.path.join(path, 'arsa.json')
+def _get_config(full_path):
     if not os.path.isfile(full_path):
         raise click.ClickException('Configuration file not found {}'.format(full_path))
 
     config = json.load(open(full_path))
 
-    required = ['handler', 'name']
+    required = ['handler', 'name', 'stage']
 
     if not all(key in config for key in required):
         raise click.ClickException('Invalid configuration file.')
@@ -92,10 +91,10 @@ def _entity_not_found(error):
 
 class DeployCommand(object):
 
-    def __init__(self, stage, path, region):
-        self.config = _get_config(path)
-        self.path = path
-        self.stage = stage
+    def __init__(self, config, app, region):
+        self.config = _get_config(config)
+        self.path = app
+        self.stage = self.config['stage']
         self.region = region
         self.build_id = str(uuid.uuid4())
 
@@ -464,29 +463,29 @@ def run_config(path):
               help='The interface to bind to.')
 @click.option('--port', '-p', default=5000,
               help='The port to bind to.')
-@click.option('--path', default=os.curdir, help='Path to an arsa app if not in root directory.')
+@click.option('--config', '-c', default='arsa.json', help='Your arsa config file"')
+@click.option('--app', '-a', default=os.curdir, help='Path to an arsa app if not in root directory.')
 @click.option('--handler', '-h', default=None,
               help='Python path to custom request handler.')
-def run_command(host, port, path, handler):
+def run_command(host, port, config, app, handler):
     """Run a local development server."""
 
     from werkzeug.serving import run_simple
 
     if handler:
-        handler = _load_custom_handler(handler, relpath=path)
+        handler = _load_custom_handler(handler, relpath=app)
 
-    config = _get_config(path)
-    app = _load_app(config['handler'], relpath=path)
+    config = _get_config(config)
+    _app = _load_app(config['handler'], relpath=app)
 
-    run_simple(host, port, app, request_handler=handler)
+    run_simple(host, port, _app, request_handler=handler)
 
 @arsa.command('deploy', short_help='Deploy your API.')
-@click.option('--stage', '-s', default='v1',
-              help='The stage to deploy your api to e.g. "v1", "production", "canary"')
-@click.option('--path', default=os.curdir, help='Path to an arsa app if not in root directory.')
+@click.option('--config', '-c', default='arsa.json', help='Your arsa config file"')
+@click.option('--app', '-a', default=os.curdir, help='Path to an arsa app if not in root directory.')
 @click.option('--region', default='us-east-1')
-def deploy_command(stage, path, region):
-    cmd = DeployCommand(stage, path, region)
+def deploy_command(config, app, region):
+    cmd = DeployCommand(config, app, region)
     cmd.deploy()
 
 def main():
