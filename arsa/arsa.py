@@ -9,7 +9,6 @@ from werkzeug.utils import redirect
 
 from .routes import RouteFactory
 from .util import to_serializable
-from .policy import Policy
 from .wrappers import AWSEnvironBuilder
 from .exceptions import Redirect
 from .globals import _request_ctx_stack
@@ -26,8 +25,6 @@ class Arsa(object):
         self.routes = None
         self.middlewares = []
 
-        self.authorizer_func = None
-
     def route(self, rule, methods=None, content_type='application/json'):
         """ Convenience decorator for defining a route """
         if methods is None:
@@ -36,15 +33,6 @@ class Arsa(object):
         def decorator(func):
             route = self.factory.register_endpoint(func)
             route.set_rule(rule, methods, mimetype=content_type)
-            return func
-
-        return decorator
-
-
-    def authorizer(self):
-        """ Set the authorizer function """
-        def decorator(func):
-            self.authorizer_func = func
             return func
 
         return decorator
@@ -81,13 +69,6 @@ class Arsa(object):
             "body": response.get_data(as_text=True)
         }
 
-    def authorize(self, auth_event, context):
-        policy = Policy(auth_event)
-
-        if self.authorizer_func:
-            policy = self.authorizer_func(auth_event, context)
-
-        return policy.as_dict()
 
     def add_middleware(self, middleware):
         if callable(middleware):

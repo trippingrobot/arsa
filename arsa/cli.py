@@ -70,11 +70,6 @@ def _get_config(full_path):
     if not all(key in config for key in required):
         raise click.ClickException('Invalid configuration file.')
 
-    if 'authorization' in config:
-        required = ['handler', 'token_source', 'token_validation', 'ttl']
-        if not all(key in config['authorization'] for key in required):
-            raise click.ClickException('Invalid authentication in configuration file.')
-
     return config
 
 def _find_root_modules(path):
@@ -107,7 +102,6 @@ class DeployCommand(object):
         self.account_id = self.session.client('sts').get_caller_identity().get('Account')
         self.rest_api_id = None
         self.role_arn = None
-        self.authorizer_id = None
 
     def deploy(self):
 
@@ -132,22 +126,6 @@ class DeployCommand(object):
             stage=self.stage
         )
         self._add_lambda_permissions('{}:{}'.format(self.account_id, api_name), source_arn)
-
-        if 'authorization' in self.config:
-            auth_name = '{}-auth'.format(api_name)
-            auth_handler = self.config['authorization']['handler']
-            self._create_lambda('{}:{}'.format(self.account_id, auth_name), auth_handler, buf)
-
-            click.secho('Setting up auth...', fg='green')
-            self._setup_api_auth(auth_name)
-
-            source_arn = 'arn:aws:execute-api:{region}:{account_id}:{api_id}/authorizers/{auth_id}'.format(
-                region=self.region,
-                account_id=self.account_id,
-                api_id=self.rest_api_id,
-                auth_id=self.authorizer_id
-            )
-            self._add_lambda_permissions('{}:{}'.format(self.account_id, auth_name), source_arn)
 
         # Setup API proxy resources
         self._setup_resources()
@@ -358,22 +336,14 @@ class DeployCommand(object):
             )
             resource_id = resp['id']
 
-            # Setup ANY method
-            if not self.authorizer_id:
-                api_client.put_method(
-                    restApiId=self.rest_api_id,
-                    resourceId=resource_id,
-                    httpMethod='ANY',
-                    authorizationType='NONE'
-                )
-            else:
-                api_client.put_method(
-                    restApiId=self.rest_api_id,
-                    resourceId=resource_id,
-                    httpMethod='ANY',
-                    authorizationType='CUSTOM',
-                    authorizerId=self.authorizer_id
-                )
+            # Setup ANY method and assign IAM permissions
+            # NOTE: If custom permissions are needed, this needs to be changed manually.
+            api_client.put_method(
+                restApiId=self.rest_api_id,
+                resourceId=resource_id,
+                httpMethod='ANY',
+                authorizationType='AWS_IAM'
+            )
 
             stage_variable = '${stageVariables.lbfunction}'
             api_client.put_integration(
@@ -387,30 +357,6 @@ class DeployCommand(object):
                     account_id=self.account_id,
                     stage_variable=stage_variable)
             )
-
-
-    def _setup_api_auth(self, name):
-        api_client = self.session.client('apigateway')
-        try:
-            auths = api_client.get_authorizers(restApiId=self.rest_api_id)
-            self.authorizer_id = next(item['id'] for item in auths['items'] if item['name'] == name)
-        except StopIteration:
-            click.secho('Creating new authorizer', fg='yellow')
-            resp = api_client.create_authorizer(
-                restApiId=self.rest_api_id,
-                name=name,
-                type='TOKEN',
-                authorizerUri='arn:aws:apigateway:{region}:lambda:path/2015-03-31/functions/arn:aws:lambda:{region}:{account_id}:function:{name}:{stage}/invocations'.format(
-                    region=self.region,
-                    account_id=self.account_id,
-                    name=name,
-                    stage=self.stage),
-                identitySource=self.config['authorization']['token_source'],
-                identityValidationExpression=self.config['authorization']['token_validation'],
-                authorizerResultTtlInSeconds=self.config['authorization']['ttl']
-            )
-            self.authorizer_id = resp['id']
-
 
 
     def _deploy_api(self, api_name):

@@ -1,6 +1,5 @@
 from arsa import Arsa
 from arsa.model import Model, Attribute
-from arsa.policy import Policy
 from arsa.exceptions import Redirect
 from arsa.globals import request
 
@@ -41,19 +40,4 @@ def redirect():
     """ Redirect to another endpoint """
     raise Redirect('https://httpbin.org/get')
 
-@app.authorizer()
-def custom_auth(auth_event, context):
-    # Create base policy from auth event
-    policy = Policy(auth_event)
-
-    # Set permission
-    policy.allow = (policy.token == 'test_token')
-
-    # Pass value to backend
-    policy.principal_id = 'user'
-
-    return policy
-
-
 handler = app.handler
-authorize = app.authorize
