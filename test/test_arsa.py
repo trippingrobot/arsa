@@ -233,17 +233,15 @@ def test_html_mime_type(app):
 
 def test_custom_error_handler(app):
 
-    class CustomException(Exception): pass
-
-    def new_error(error):
-        return BadRequest()
+    class CustomException(Exception):
+        pass
 
     def raise_error():
         raise CustomException('bad')
 
     func = MagicMock(testfunc, side_effect=raise_error)
     app.route('/foobar')(func)
-    app.add_exception_handler(CustomException, new_error)
+    app.add_exception(CustomException)
 
     client = Client(app.create_app(), response_wrapper=Response)
 
