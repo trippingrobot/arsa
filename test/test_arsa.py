@@ -5,6 +5,7 @@ import os
 from unittest.mock import MagicMock
 from werkzeug.test import Client
 from werkzeug.wrappers import Response
+from werkzeug.exceptions import BadRequest
 from arsa import Arsa
 from arsa.model import Model, Attribute, ListType
 from arsa.exceptions import Redirect
@@ -229,3 +230,22 @@ def test_html_mime_type(app):
     assert response.status_code == 200
     assert response.headers['Content-Type'] == 'application/html'
     assert response.data == b'<html><body><p>HI</p></body></html>'
+
+def test_custom_error_handler(app):
+
+    class CustomException(Exception): pass
+
+    def new_error(error):
+        return BadRequest()
+
+    def raise_error():
+        raise CustomException('bad')
+
+    func = MagicMock(testfunc, side_effect=raise_error)
+    app.route('/foobar')(func)
+    app.add_exception_handler(CustomException, new_error)
+
+    client = Client(app.create_app(), response_wrapper=Response)
+
+    response = client.get('/foobar')
+    assert response.status_code == 400

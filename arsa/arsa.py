@@ -24,6 +24,7 @@ class Arsa(object):
         self.factory = RouteFactory()
         self.routes = None
         self.middlewares = []
+        self.exceptions = {}
 
     def route(self, rule, methods=None, content_type='application/json'):
         """ Convenience decorator for defining a route """
@@ -74,6 +75,10 @@ class Arsa(object):
         if callable(middleware):
             self.middlewares.append(middleware)
 
+    def add_exception_handler(self, error_type, value):
+        if callable(value):
+            self.exceptions[error_type] = value
+
     def create_app(self):
 
         if not self.routes:
@@ -112,11 +117,18 @@ class Arsa(object):
                 resp = Response(body, mimetype=rule.mimetype)
             except Redirect as error:
                 resp = redirect(error.location)
+
             except HTTPException as error:
                 resp = Response(
                     json.dumps(error, default=to_serializable),
                     error.code
                 )
+            except Exception as error:
+                error_type = type(error)
+                if error_type in self.exceptions:
+                    resp = self.exceptions[error_type](error)
+                else:
+                    raise error
 
             _request_ctx_stack.pop()
 

@@ -9,6 +9,12 @@ class Person(Model):
 
 app = Arsa()
 
+@app.route("/context")
+def context():
+    """ Get api request context """
+    cxt = request.environ['aws.requestContext']
+    return cxt
+
 @app.route("/users")
 def list_users():
     """ Get users """
