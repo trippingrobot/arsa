@@ -119,13 +119,15 @@ class Arsa(object):
             except tuple(self.exceptions) as error:
                 code = error.code if hasattr(error, 'code') else 400
                 resp = Response(
-                    json.dumps(error, default=to_serializable),
-                    code
+                    response=json.dumps(error, default=to_serializable),
+                    status=code,
+                    mimetype='application/json'
                 )
             except HTTPException as error:
                 resp = Response(
-                    json.dumps(error, default=to_serializable),
-                    error.code
+                    response=json.dumps(error, default=to_serializable),
+                    status=error.code,
+                    mimetype='application/json'
                 )
 
             _request_ctx_stack.pop()

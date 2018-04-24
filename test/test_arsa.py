@@ -247,3 +247,5 @@ def test_custom_error_handler(app):
 
     response = client.get('/foobar')
     assert response.status_code == 400
+    assert response.data == b'"bad"'
+    assert response.content_type == 'application/json'
