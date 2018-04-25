@@ -4,11 +4,9 @@ from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import HTTPException, BadRequest
 from werkzeug.test import run_wsgi_app
-from werkzeug.utils import redirect
-
 
 from .routes import RouteFactory
-from .util import to_serializable
+from .util import to_serializable, redirect
 from .wrappers import AWSEnvironBuilder
 from .exceptions import Redirect
 from .globals import _request_ctx_stack
@@ -115,7 +113,7 @@ class Arsa(object):
 
                 resp = Response(body, mimetype=rule.mimetype)
             except Redirect as error:
-                resp = redirect(error.location)
+                resp = error
             except tuple(self.exceptions) as error:
                 code = error.code if hasattr(error, 'code') else 400
                 resp = Response(
