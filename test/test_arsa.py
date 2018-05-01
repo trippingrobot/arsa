@@ -155,6 +155,15 @@ def test_redirect_handler(app):
     assert response['statusCode'] == 302
     assert response['headers']['Location'] == 'http://example.com'
 
+def test_stage_in_path_handler(app):
+    func = MagicMock(testfunc, return_value='response')
+    app.route('/users')(func)
+    event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/get_proxy_w_stage.json')))
+
+    response = app.handler(event, {})
+    assert response['statusCode'] == 200
+    assert response['body'] == '"response"'
+
 def test_get_route_with_query_params(app):
     func = MagicMock(testfunc, side_effect=lambda **kwargs: request.args['happy'])
     app.route('/foobar')(func)

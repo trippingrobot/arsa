@@ -4,9 +4,10 @@ from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import HTTPException, BadRequest
 from werkzeug.test import run_wsgi_app
+from werkzeug._internal import _log
 
 from .routes import RouteFactory
-from .util import to_serializable, redirect
+from .util import to_serializable
 from .wrappers import AWSEnvironBuilder
 from .exceptions import Redirect
 from .globals import _request_ctx_stack
@@ -57,10 +58,20 @@ class Arsa(object):
 
         builder = AWSEnvironBuilder(event, context)
         builder.close()
-        resp = run_wsgi_app(app, builder.get_environ())
+        environ = builder.get_environ()
+        resp = run_wsgi_app(app, environ)
 
         #wrap response
         response = Response(*resp)
+
+        # log response
+        print('{host} - - "{method} {path} {protocol}" {status}\n'.format(
+            host=environ.get('SERVER_NAME', 'localhost'),
+            method=environ.get('REQUEST_METHOD', 'GET'),
+            path=environ.get('PATH_INFO', '/'),
+            protocol=environ.get('SERVER_PROTOCOL', '/'),
+            status=response.status_code
+        ))
 
         return {
             "statusCode": response.status_code,

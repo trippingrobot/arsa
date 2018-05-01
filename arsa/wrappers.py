@@ -1,3 +1,4 @@
+import re
 from werkzeug.test import EnvironBuilder
 
 class AWSEnvironBuilder(EnvironBuilder):
@@ -10,8 +11,15 @@ class AWSEnvironBuilder(EnvironBuilder):
                     ['{}={}'.format(k, v) for k, v in event['queryStringParameters'].items()]
                 )
 
+        if 'stage' in event['requestContext']:
+            stage = event['requestContext']['stage']
+            path = re.sub(r'^/%s/' % stage, '/', event['path'])
+        else:
+            path = event['path']
+
+        print(path)
         super(AWSEnvironBuilder, self).__init__(
-            path=event['path'],
+            path=path,
             method=event['httpMethod'],
             headers=event['headers'],
             data=event['body'],
