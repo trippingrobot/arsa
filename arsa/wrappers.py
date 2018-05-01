@@ -17,7 +17,6 @@ class AWSEnvironBuilder(EnvironBuilder):
         else:
             path = event['path']
 
-        print(path)
         super(AWSEnvironBuilder, self).__init__(
             path=path,
             method=event['httpMethod'],
