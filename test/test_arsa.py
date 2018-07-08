@@ -164,6 +164,16 @@ def test_stage_in_path_handler(app):
     assert response['statusCode'] == 200
     assert response['body'] == '"response"'
 
+def test_handler_query_params(app):
+    func = MagicMock(testfunc, side_effect=lambda Happy, **kwargs: Happy)
+    app.route('/foo')(app.required(Happy=str)(func))
+    event = json.load(open(os.path.join(os.path.dirname(__file__), 'requests/get_proxy_w_stage_w_query.json')))
+
+    response = app.handler(event, {})
+    print(response)
+    assert response['statusCode'] == 200
+    assert response['body'] == '"dance"'
+
 def test_get_route_with_query_params(app):
     func = MagicMock(testfunc, side_effect=lambda **kwargs: request.args['happy'])
     app.route('/foobar')(func)

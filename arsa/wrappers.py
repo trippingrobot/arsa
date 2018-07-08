@@ -7,7 +7,7 @@ class AWSEnvironBuilder(EnvironBuilder):
         query_string = None
         if 'queryStringParameters' in event:
             if isinstance(event['queryStringParameters'], dict):
-                query_string = '?'.join(
+                query_string = '&'.join(
                     ['{}={}'.format(k, v) for k, v in event['queryStringParameters'].items()]
                 )
 
