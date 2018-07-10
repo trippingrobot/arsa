@@ -107,6 +107,9 @@ class Arsa(object):
 
                 arguments.update(dict(req.args))
 
+                if req.form:
+                    arguments.update(req.form)
+
                 if req.data:
                     try:
                         data = json.loads(req.data)

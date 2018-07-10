@@ -11,6 +11,8 @@ from arsa.model import Model, Attribute, ListType
 from arsa.exceptions import Redirect
 from arsa.globals import request, g
 
+from urllib import parse
+
 class SampleModel(Model):
     name = Attribute(str)
 
@@ -33,6 +35,15 @@ def test_bad_json_route(app):
     client = Client(app.create_app(), response_wrapper=Response)
     response = client.get('/foobar', data='{}}')
     assert response.status_code == 400
+
+
+def test_urlencoded_post(app):
+    func = MagicMock(testfunc, side_effect=lambda payload: payload[0])
+    app.route('/foobar', methods=['POST'])(app.required(payload=ListType)(func))
+    client = Client(app.create_app(), response_wrapper=Response)
+    response = client.post('/foobar', data=f'payload={parse.quote("{}")}', content_type='application/x-www-form-urlencoded')
+    assert response.status_code == 200
+    assert response.data == b'"{}"'
 
 def test_get_route(app):
     func = MagicMock(testfunc, return_value='response')
@@ -83,9 +94,8 @@ def test_invalid_route_value(app):
     app.route('/val')(app.required(name=str)(func))
 
     client = Client(app.create_app(), response_wrapper=Response)
-    response = client.get('/val', data={'name':'Bob'})
+    response = client.get('/val', data={'name1':'Bob'})
     assert response.status_code == 400
-
 
 def test_optional_route_value(app):
     func = MagicMock(testfunc, return_value='response')
