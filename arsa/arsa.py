@@ -4,12 +4,10 @@ from werkzeug.routing import Map
 from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import HTTPException, BadRequest
 from werkzeug.test import run_wsgi_app
-from werkzeug.utils import redirect
-
+from werkzeug._internal import _log
 
 from .routes import RouteFactory
 from .util import to_serializable
-from .policy import Policy
 from .wrappers import AWSEnvironBuilder
 from .exceptions import Redirect
 from .globals import _request_ctx_stack
@@ -25,8 +23,7 @@ class Arsa(object):
         self.factory = RouteFactory()
         self.routes = None
         self.middlewares = []
-
-        self.authorizer_func = None
+        self.exceptions = []
 
     def route(self, rule, methods=None, content_type='application/json'):
         """ Convenience decorator for defining a route """
@@ -36,15 +33,6 @@ class Arsa(object):
         def decorator(func):
             route = self.factory.register_endpoint(func)
             route.set_rule(rule, methods, mimetype=content_type)
-            return func
-
-        return decorator
-
-
-    def authorizer(self):
-        """ Set the authorizer function """
-        def decorator(func):
-            self.authorizer_func = func
             return func
 
         return decorator
@@ -70,10 +58,20 @@ class Arsa(object):
 
         builder = AWSEnvironBuilder(event, context)
         builder.close()
-        resp = run_wsgi_app(app, builder.get_environ())
+        environ = builder.get_environ()
+        resp = run_wsgi_app(app, environ)
 
         #wrap response
         response = Response(*resp)
+
+        # log response
+        print('{host} - - "{method} {path} {protocol}" {status}\n'.format(
+            host=environ.get('SERVER_NAME', 'localhost'),
+            method=environ.get('REQUEST_METHOD', 'GET'),
+            path=environ.get('PATH_INFO', '/'),
+            protocol=environ.get('SERVER_PROTOCOL', '/'),
+            status=response.status_code
+        ))
 
         return {
             "statusCode": response.status_code,
@@ -81,17 +79,13 @@ class Arsa(object):
             "body": response.get_data(as_text=True)
         }
 
-    def authorize(self, auth_event, context):
-        policy = Policy(auth_event)
-
-        if self.authorizer_func:
-            policy = self.authorizer_func(auth_event, context)
-
-        return policy.as_dict()
 
     def add_middleware(self, middleware):
         if callable(middleware):
             self.middlewares.append(middleware)
+
+    def add_exception(self, error_type):
+        self.exceptions.append(error_type)
 
     def create_app(self):
 
@@ -113,6 +107,9 @@ class Arsa(object):
 
                 arguments.update(dict(req.args))
 
+                if req.form:
+                    arguments.update(req.form)
+
                 if req.data:
                     try:
                         data = json.loads(req.data)
@@ -130,11 +127,19 @@ class Arsa(object):
 
                 resp = Response(body, mimetype=rule.mimetype)
             except Redirect as error:
-                resp = redirect(error.location)
+                resp = error
+            except tuple(self.exceptions) as error:
+                code = error.code if hasattr(error, 'code') else 400
+                resp = Response(
+                    response=json.dumps(error, default=to_serializable),
+                    status=code,
+                    mimetype='application/json'
+                )
             except HTTPException as error:
                 resp = Response(
-                    json.dumps(error, default=to_serializable),
-                    error.code
+                    response=json.dumps(error, default=to_serializable),
+                    status=error.code,
+                    mimetype='application/json'
                 )
 
             _request_ctx_stack.pop()

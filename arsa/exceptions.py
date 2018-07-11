@@ -1,4 +1,5 @@
 from werkzeug.exceptions import HTTPException
+from werkzeug.datastructures import EnvironHeaders
 
 class ArgumentKeyError(ValueError): pass
 class NoCredentailsFoundError(Exception): pass
@@ -10,4 +11,10 @@ class Redirect(HTTPException):
         self.location = location
 
     def get_headers(self, environ=None):
-        return [('Location', self.location)]
+        headers = []
+        if environ:
+            headers = list(EnvironHeaders(environ))
+
+        headers.append(('Location', self.location))
+
+        return headers
